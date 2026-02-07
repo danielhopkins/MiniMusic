@@ -54,8 +54,6 @@ struct PlayerView: View {
                 .padding(.top, 6)
             Divider().padding(.top, 4)
             navigationSection
-            Divider()
-            bottomBar
         }
         .padding(.vertical, 8)
         .keyboardShortcut(.space, modifiers: [])
@@ -82,6 +80,16 @@ struct PlayerView: View {
                         navigationPath.append(NavigationDestination.search)
                     }
                 }
+            Button {
+                appState.isMenuPresented = false
+                openSettings()
+                NSApp.activate()
+            } label: {
+                Image(systemName: "gearshape")
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Settings")
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
@@ -283,34 +291,6 @@ struct PlayerView: View {
     private var queueCountText: String {
         let count = playerVM.queueCount
         return count > 0 ? "\(count) up next" : ""
-    }
-
-    // MARK: - Bottom Bar
-
-    private var bottomBar: some View {
-        HStack {
-            Button {
-                appState.isMenuPresented = false
-                openSettings()
-                NSApp.activate()
-            } label: {
-                Image(systemName: "gearshape")
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Settings")
-
-            Spacer()
-
-            Button {
-                NSApplication.shared.terminate(nil)
-            } label: {
-                Text("Quit")
-            }
-            .buttonStyle(.plain)
-            .keyboardShortcut("q")
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 6)
     }
 
     // MARK: - Helpers

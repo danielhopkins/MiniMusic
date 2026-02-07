@@ -18,7 +18,7 @@ struct SearchView: View {
             Divider()
             content
         }
-        .padding(.top, -44)
+        .padding(.top, -30)
         .navigationTitle("Search")
         .onChange(of: searchVM.searchQuery) { _, _ in
             selectedIndex = nil
