@@ -22,6 +22,10 @@ A lightweight macOS menu bar player for Apple Music. Control playback, search yo
 
 ## Install
 
+### Download
+
+Grab the latest DMG from the [Releases page](https://github.com/danielhopkins/MiniMusic/releases). Open the DMG and drag MiniMusic to your Applications folder. The app is signed, notarized, and sandboxed — no Gatekeeper warnings.
+
 ### From source
 
 ```bash
