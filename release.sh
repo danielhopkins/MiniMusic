@@ -110,11 +110,18 @@ hdiutil create \
 
 rm -rf "$STAGING_DIR"
 
-# ── 9. Staple the DMG ───────────────────────────────────────────────
+# ── 9. Notarize the DMG ──────────────────────────────────────────────
+echo "Submitting DMG for notarization..."
+xcrun notarytool submit "$DMG_PATH" \
+    --keychain-profile "$KEYCHAIN_PROFILE" \
+    --wait
+echo "DMG notarization complete."
+
+# ── 10. Staple the DMG ──────────────────────────────────────────────
 echo "Stapling DMG..."
 xcrun stapler staple "$DMG_PATH"
 
-# ── 10. Summary ──────────────────────────────────────────────────────
+# ── 11. Summary ──────────────────────────────────────────────────────
 DMG_SIZE=$(du -h "$DMG_PATH" | cut -f1 | xargs)
 echo ""
 echo "════════════════════════════════════════"
