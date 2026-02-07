@@ -5,21 +5,18 @@ import SwiftUI
 
 @main
 struct MiniMusicApp: App {
-    @StateObject private var appState: AppState
-    @StateObject private var authManager: MusicAuthManager
-    @StateObject private var playerVM: PlayerViewModel
-    @StateObject private var searchVM: MusicSearchViewModel
+    @State private var appState: AppState
+    @State private var authManager: MusicAuthManager
+    @State private var playerVM: PlayerViewModel
+    @State private var searchVM: MusicSearchViewModel
 
     init() {
         let appState = AppState()
-        let authManager = MusicAuthManager()
-        let playerVM = PlayerViewModel()
         let searchVM = MusicSearchViewModel()
-
-        _appState = StateObject(wrappedValue: appState)
-        _authManager = StateObject(wrappedValue: authManager)
-        _playerVM = StateObject(wrappedValue: playerVM)
-        _searchVM = StateObject(wrappedValue: searchVM)
+        _appState = State(wrappedValue: appState)
+        _authManager = State(wrappedValue: MusicAuthManager())
+        _playerVM = State(wrappedValue: PlayerViewModel())
+        _searchVM = State(wrappedValue: searchVM)
 
         KeyboardShortcuts.onKeyDown(for: .toggleMiniMusic) {
             Task { @MainActor in
@@ -30,15 +27,16 @@ struct MiniMusicApp: App {
                     searchVM.clearResults()
                     appState.isMenuPresented = true
                     NSApp.activate(ignoringOtherApps: true)
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                        appState.isSearchFieldFocused = true
-                    }
+                    try? await Task.sleep(for: .milliseconds(200))
+                    appState.isSearchFieldFocused = true
                 }
             }
         }
     }
 
     var body: some Scene {
+        @Bindable var appState = appState
+
         MenuBarExtra("MiniMusic", systemImage: "music.note") {
             Group {
                 if authManager.status == .authorized {
@@ -47,10 +45,10 @@ struct MiniMusicApp: App {
                     authView
                 }
             }
-            .environmentObject(appState)
-            .environmentObject(authManager)
-            .environmentObject(playerVM)
-            .environmentObject(searchVM)
+            .environment(appState)
+            .environment(authManager)
+            .environment(playerVM)
+            .environment(searchVM)
         }
         .menuBarExtraStyle(.window)
         .menuBarExtraAccess(isPresented: $appState.isMenuPresented)

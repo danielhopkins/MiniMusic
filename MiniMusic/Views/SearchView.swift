@@ -2,14 +2,17 @@ import MusicKit
 import SwiftUI
 
 struct SearchView: View {
-    @EnvironmentObject var searchVM: MusicSearchViewModel
-    @EnvironmentObject var appState: AppState
+    @Environment(MusicSearchViewModel.self) var searchVM
+    @Environment(AppState.self) var appState
+    @Environment(PlayerViewModel.self) private var playerVM
 
     @State private var selectedIndex: Int?
     @State private var keyMonitor: Any?
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
+        @Bindable var searchVM = searchVM
+
         VStack(spacing: 0) {
             searchBar
             Divider()
@@ -26,6 +29,7 @@ struct SearchView: View {
     // MARK: - Key Handling
 
     private func installKeyMonitor() {
+        guard keyMonitor == nil else { return }
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
             switch Int(event.keyCode) {
             case 125: // down arrow
@@ -38,7 +42,7 @@ struct SearchView: View {
                 if let index = selectedIndex {
                     let results = searchVM.allResults
                     if index >= 0 && index < results.count {
-                        Task { await searchVM.playItem(results[index]) }
+                        playerVM.playItem(results[index])
                         searchVM.searchQuery = ""
                         searchVM.clearResults()
                         dismiss()
@@ -69,7 +73,9 @@ struct SearchView: View {
     // MARK: - Search Bar
 
     private var searchBar: some View {
-        TextField("Search Apple Music...", text: $searchVM.searchQuery)
+        @Bindable var searchVM = searchVM
+
+        return TextField("Search Apple Music...", text: $searchVM.searchQuery)
             .textFieldStyle(.roundedBorder)
             .padding(12)
     }
@@ -123,7 +129,7 @@ struct SearchView: View {
                         }
 
                         Button {
-                            Task { await searchVM.playItem(item) }
+                            playerVM.playItem(item)
                         } label: {
                             SearchRow(
                                 title: item.title,
@@ -140,6 +146,7 @@ struct SearchView: View {
                         }
                         .buttonStyle(.plain)
                         .id(index)
+                        .accessibilityLabel("\(item.title), \(item.subtitle)")
                     }
                 }
                 .padding(.vertical, 4)

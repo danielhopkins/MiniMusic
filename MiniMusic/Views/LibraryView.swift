@@ -2,14 +2,13 @@ import MusicKit
 import SwiftUI
 
 struct LibraryView: View {
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
+    @Environment(PlayerViewModel.self) private var playerVM
 
     @State private var playlists: MusicItemCollection<Playlist> = []
     @State private var recentAlbums: MusicItemCollection<Album> = []
     @State private var isLoading = true
     @State private var errorMessage: String?
-
-    private let player = ApplicationMusicPlayer.shared
 
     var body: some View {
         VStack(spacing: 0) {
@@ -125,19 +124,11 @@ struct LibraryView: View {
     // MARK: - Playback
 
     private func playPlaylist(_ playlist: Playlist) {
-        Task {
-            player.state.shuffleMode = .songs
-            player.queue = [playlist]
-            try? await player.prepareToPlay()
-            try? await player.play()
-        }
+        playerVM.playPlaylist(playlist)
     }
 
     private func playAlbum(_ album: Album) {
-        Task {
-            player.queue = [album]
-            try? await player.play()
-        }
+        playerVM.play(album)
     }
 }
 

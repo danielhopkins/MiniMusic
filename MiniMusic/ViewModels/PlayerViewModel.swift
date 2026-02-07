@@ -1,26 +1,40 @@
 import Foundation
 import MusicKit
 import Combine
+import Observation
 
 @MainActor
-final class PlayerViewModel: ObservableObject {
+@Observable final class PlayerViewModel {
 
-    // MARK: - Published State
+    // MARK: - State
 
-    @Published private(set) var currentTitle: String = ""
-    @Published private(set) var currentArtist: String = ""
-    @Published private(set) var currentAlbumTitle: String = ""
-    @Published private(set) var artworkURL: URL?
-    @Published private(set) var isPlaying: Bool = false
-    @Published private(set) var playbackTime: TimeInterval = 0
-    @Published private(set) var duration: TimeInterval = 0
-    @Published var volume: Float = 0.5
+    private(set) var currentTitle: String = ""
+    private(set) var currentArtist: String = ""
+    private(set) var currentAlbumTitle: String = ""
+    private(set) var artworkURL: URL?
+    private(set) var isPlaying: Bool = false
+    private(set) var playbackTime: TimeInterval = 0
+    private(set) var duration: TimeInterval = 0
+
+    // MARK: - Queue Access
+
+    var queueEntries: [ApplicationMusicPlayer.Queue.Entry] {
+        Array(player.queue.entries)
+    }
+
+    var currentQueueEntry: ApplicationMusicPlayer.Queue.Entry? {
+        player.queue.currentEntry
+    }
+
+    var queueCount: Int {
+        max(player.queue.entries.count - 1, 0)
+    }
 
     // MARK: - Private
 
     private let player = ApplicationMusicPlayer.shared
     private var cancellables = Set<AnyCancellable>()
-    private var timeObserverTask: Task<Void, Never>?
+    @ObservationIgnored private var timeObserverTask: Task<Void, Never>?
 
     // MARK: - Init
 
@@ -86,9 +100,11 @@ final class PlayerViewModel: ObservableObject {
         }
     }
 
-    func play(_ playlist: Playlist) {
+    func playPlaylist(_ playlist: Playlist) {
         Task {
+            player.state.shuffleMode = .songs
             player.queue = [playlist]
+            try? await player.prepareToPlay()
             try? await player.play()
         }
     }
@@ -97,6 +113,34 @@ final class PlayerViewModel: ObservableObject {
         Task {
             player.queue = [station]
             try? await player.play()
+        }
+    }
+
+    func playTopSongForArtist(_ artist: Artist) {
+        Task {
+            do {
+                let detailedArtist = try await artist.with([.topSongs])
+                guard let topSong = detailedArtist.topSongs?.first else {
+                    return
+                }
+                player.queue = [topSong]
+                try await player.play()
+            } catch {
+                // Artist playback error - non-fatal
+            }
+        }
+    }
+
+    func playItem(_ item: SearchResultItem) {
+        switch item {
+        case .librarySong(let song), .catalogSong(let song):
+            play(song)
+        case .libraryAlbum(let album), .catalogAlbum(let album):
+            play(album)
+        case .libraryArtist(let artist), .catalogArtist(let artist):
+            playTopSongForArtist(artist)
+        case .libraryPlaylist(let playlist), .catalogPlaylist(let playlist):
+            playPlaylist(playlist)
         }
     }
 
@@ -160,7 +204,7 @@ final class PlayerViewModel: ObservableObject {
     }
 
     private func startTimeObserver() {
-        timeObserverTask = Task { [weak self] in
+        timeObserverTask = Task { @MainActor [weak self] in
             while !Task.isCancelled {
                 guard let self else { return }
                 self.playbackTime = self.player.playbackTime

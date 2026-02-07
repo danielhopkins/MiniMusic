@@ -2,9 +2,8 @@ import MusicKit
 import SwiftUI
 
 struct QueueView: View {
-    @EnvironmentObject var appState: AppState
-
-    private let player = ApplicationMusicPlayer.shared
+    @Environment(AppState.self) var appState
+    @Environment(PlayerViewModel.self) private var playerVM
 
     var body: some View {
         VStack(spacing: 0) {
@@ -17,8 +16,8 @@ struct QueueView: View {
 
     @ViewBuilder
     private var queueContent: some View {
-        let entries = Array(player.queue.entries)
-        let currentEntry = player.queue.currentEntry
+        let entries = playerVM.queueEntries
+        let currentEntry = playerVM.currentQueueEntry
 
         if entries.isEmpty {
             Spacer()

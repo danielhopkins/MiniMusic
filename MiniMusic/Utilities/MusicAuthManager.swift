@@ -1,9 +1,10 @@
 import Foundation
 import MusicKit
+import Observation
 
 @MainActor
-final class MusicAuthManager: ObservableObject {
-    @Published private(set) var status: MusicAuthorization.Status = .notDetermined
+@Observable final class MusicAuthManager {
+    private(set) var status: MusicAuthorization.Status = .notDetermined
 
     init() {
         status = MusicAuthorization.currentStatus

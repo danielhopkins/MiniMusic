@@ -2,16 +2,20 @@ import SwiftUI
 import MusicKit
 
 struct PlayerView: View {
-    @EnvironmentObject private var playerVM: PlayerViewModel
-    @EnvironmentObject private var searchVM: MusicSearchViewModel
-    @EnvironmentObject private var appState: AppState
+    @Environment(PlayerViewModel.self) private var playerVM
+    @Environment(MusicSearchViewModel.self) private var searchVM
+    @Environment(AppState.self) private var appState
 
     @State private var isSeeking = false
     @State private var seekTime: TimeInterval = 0
 
     @FocusState private var isSearchFocused: Bool
+    @State private var navigationPath = NavigationPath()
 
     var body: some View {
+        @Bindable var searchVM = searchVM
+        @Bindable var appState = appState
+
         NavigationStack(path: $navigationPath) {
             mainContent
                 .navigationDestination(for: NavigationDestination.self) { destination in
@@ -30,15 +34,11 @@ struct PlayerView: View {
         .frame(width: 320, height: 400)
         .onChange(of: appState.isSearchFieldFocused) { _, shouldFocus in
             if shouldFocus {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                    isSearchFocused = true
-                    appState.isSearchFieldFocused = false
-                }
+                isSearchFocused = true
+                appState.isSearchFieldFocused = false
             }
         }
     }
-
-    @State private var navigationPath = NavigationPath()
 
     // MARK: - Main Content
 
@@ -50,7 +50,6 @@ struct PlayerView: View {
             Spacer(minLength: 4)
             controlsSection
             progressSection
-            volumeSection
             Divider().padding(.top, 8)
             navigationSection
             Divider()
@@ -63,7 +62,9 @@ struct PlayerView: View {
     // MARK: - Search Bar
 
     private var searchBar: some View {
-        HStack {
+        @Bindable var searchVM = searchVM
+
+        return HStack {
             Image(systemName: "magnifyingglass")
                 .foregroundStyle(.secondary)
             TextField("Search...", text: $searchVM.searchQuery)
@@ -155,6 +156,7 @@ struct PlayerView: View {
                     .font(.title2)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Previous track")
 
             Button { playerVM.togglePlayPause() } label: {
                 Image(systemName: playerVM.isPlaying ? "pause.fill" : "play.fill")
@@ -162,12 +164,14 @@ struct PlayerView: View {
             }
             .buttonStyle(.plain)
             .keyboardShortcut(.space, modifiers: [])
+            .accessibilityLabel(playerVM.isPlaying ? "Pause" : "Play")
 
             Button { playerVM.skipForward() } label: {
                 Image(systemName: "forward.fill")
                     .font(.title2)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Next track")
         }
         .padding(.vertical, 4)
     }
@@ -192,6 +196,7 @@ struct PlayerView: View {
                     }
                 }
             )
+            .accessibilityLabel("Playback position")
 
             HStack {
                 Text(formatTime(isSeeking ? seekTime : playerVM.playbackTime))
@@ -204,23 +209,6 @@ struct PlayerView: View {
                     .foregroundStyle(.secondary)
                     .monospacedDigit()
             }
-        }
-        .padding(.horizontal, 16)
-    }
-
-    // MARK: - Volume
-
-    private var volumeSection: some View {
-        HStack(spacing: 6) {
-            Image(systemName: "speaker.fill")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-
-            Slider(value: $playerVM.volume, in: 0...1)
-
-            Image(systemName: "speaker.wave.3.fill")
-                .font(.caption)
-                .foregroundStyle(.secondary)
         }
         .padding(.horizontal, 16)
     }
@@ -266,8 +254,7 @@ struct PlayerView: View {
     }
 
     private var queueCountText: String {
-        let entries = ApplicationMusicPlayer.shared.queue.entries
-        let count = max(entries.count - 1, 0) // exclude current
+        let count = playerVM.queueCount
         return count > 0 ? "\(count) up next" : ""
     }
 
@@ -276,8 +263,9 @@ struct PlayerView: View {
     private var bottomBar: some View {
         HStack {
             Button {
-                appState.isMenuPresented = false
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                Task {
+                    appState.isMenuPresented = false
+                    try? await Task.sleep(for: .milliseconds(200))
                     NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
                     NSApp.activate(ignoringOtherApps: true)
                 }
@@ -285,6 +273,7 @@ struct PlayerView: View {
                 Image(systemName: "gearshape")
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Settings")
 
             Spacer()
 

@@ -9,11 +9,11 @@ enum NavigationDestination: Hashable {
 }
 
 @MainActor
-final class AppState: ObservableObject {
-    @Published var authStatus: MusicAuthorization.Status = .notDetermined
-    @Published var currentDestination: NavigationDestination = .player
-    @Published var isSearchFieldFocused: Bool = false
-    @Published var isMenuPresented: Bool = false
+@Observable final class AppState {
+    var authStatus: MusicAuthorization.Status = .notDetermined
+    var currentDestination: NavigationDestination = .player
+    var isSearchFieldFocused: Bool = false
+    var isMenuPresented: Bool = false
 
     var isAuthorized: Bool {
         authStatus == .authorized
