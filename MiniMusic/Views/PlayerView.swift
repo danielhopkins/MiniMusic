@@ -5,6 +5,7 @@ struct PlayerView: View {
     @Environment(PlayerViewModel.self) private var playerVM
     @Environment(MusicSearchViewModel.self) private var searchVM
     @Environment(AppState.self) private var appState
+    @Environment(\.openSettings) private var openSettings
 
     @State private var isSeeking = false
     @State private var seekTime: TimeInterval = 0
@@ -263,12 +264,9 @@ struct PlayerView: View {
     private var bottomBar: some View {
         HStack {
             Button {
-                Task {
-                    appState.isMenuPresented = false
-                    try? await Task.sleep(for: .milliseconds(200))
-                    NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
-                    NSApp.activate(ignoringOtherApps: true)
-                }
+                appState.isMenuPresented = false
+                openSettings()
+                NSApp.activate(ignoringOtherApps: true)
             } label: {
                 Image(systemName: "gearshape")
             }
