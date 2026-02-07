@@ -143,7 +143,7 @@ struct SearchView: View {
                                     ? Color.accentColor.opacity(0.15)
                                     : Color.clear
                             )
-                            .cornerRadius(4)
+                            .clipShape(.rect(cornerRadius: 4))
                         }
                         .buttonStyle(.plain)
                         .id(index)
@@ -219,7 +219,7 @@ private struct SearchRow: View {
                         .fill(.quaternary)
                 }
                 .frame(width: 36, height: 36)
-                .cornerRadius(4)
+                .clipShape(.rect(cornerRadius: 4))
             } else {
                 RoundedRectangle(cornerRadius: 4)
                     .fill(.quaternary)

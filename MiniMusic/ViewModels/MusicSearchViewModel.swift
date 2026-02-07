@@ -2,7 +2,6 @@ import MusicKit
 import SwiftUI
 import Observation
 
-@MainActor
 @Observable final class MusicSearchViewModel {
 
     // MARK: - State

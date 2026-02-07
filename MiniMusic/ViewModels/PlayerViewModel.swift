@@ -3,7 +3,6 @@ import MusicKit
 import Combine
 import Observation
 
-@MainActor
 @Observable final class PlayerViewModel {
 
     // MARK: - State
@@ -32,7 +31,7 @@ import Observation
 
     // MARK: - Private
 
-    private let player = ApplicationMusicPlayer.shared
+    nonisolated(unsafe) private let player = ApplicationMusicPlayer.shared
     private var cancellables = Set<AnyCancellable>()
     @ObservationIgnored private var timeObserverTask: Task<Void, Never>?
 
@@ -145,8 +144,9 @@ import Observation
     }
 
     func addToQueue(_ song: Song) {
+        let queue = player.queue
         Task {
-            try? await player.queue.insert(song, position: .tail)
+            try? await queue.insert(song, position: .tail)
         }
     }
 
@@ -167,7 +167,7 @@ import Observation
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in
                 guard let self else { return }
-                Task { @MainActor in
+                Task {
                     self.updateCurrentEntry()
                 }
             }
@@ -204,11 +204,11 @@ import Observation
     }
 
     private func startTimeObserver() {
-        timeObserverTask = Task { @MainActor [weak self] in
+        timeObserverTask = Task { [weak self] in
             while !Task.isCancelled {
                 guard let self else { return }
                 self.playbackTime = self.player.playbackTime
-                try? await Task.sleep(nanoseconds: 500_000_000) // 0.5s
+                try? await Task.sleep(for: .milliseconds(500))
             }
         }
     }

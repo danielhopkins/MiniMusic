@@ -141,7 +141,7 @@ struct PlayerView: View {
             .foregroundStyle(.white)
             .opacity(isHoveringArtwork ? 1 : 0)
         }
-        .cornerRadius(8)
+        .clipShape(.rect(cornerRadius: 8))
         .padding(.horizontal, 8)
         .onHover { hovering in
             isHoveringArtwork = hovering
@@ -292,7 +292,7 @@ struct PlayerView: View {
             Button {
                 appState.isMenuPresented = false
                 openSettings()
-                NSApp.activate(ignoringOtherApps: true)
+                NSApp.activate()
             } label: {
                 Image(systemName: "gearshape")
             }

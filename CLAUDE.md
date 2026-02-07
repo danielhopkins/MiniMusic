@@ -1,8 +1,8 @@
 # MiniMusic
 
 ## Quick Reference
-- **Platform**: macOS 14+
-- **Language**: Swift 5.9
+- **Platform**: macOS 26+
+- **Language**: Swift 6.2
 - **UI Framework**: SwiftUI
 - **Architecture**: MVVM with @Observable
 - **Package Manager**: Swift Package Manager (via XcodeGen)
@@ -39,10 +39,10 @@ MiniMusic/
 - Follow Apple's Swift API Design Guidelines
 - Use `guard` for early exits
 - Prefer value types (structs) over reference types (classes) where appropriate
-- Mark ViewModels with `@MainActor`
+- Default actor isolation is `MainActor` (via `SWIFT_DEFAULT_ACTOR_ISOLATION` build setting) — no need for explicit `@MainActor` annotations on types
 
 ### SwiftUI Patterns
-- Prefer `@Observable` over `ObservableObject` (macOS 14+ target)
+- Prefer `@Observable` over `ObservableObject` (macOS 26+ target)
 - Use `@State` for view-owned state (works for both value and @Observable types)
 - Use `@Environment` for dependency injection (replaces @EnvironmentObject)
 - Use `@Bindable` for bindings to @Observable objects

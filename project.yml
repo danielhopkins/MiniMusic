@@ -2,8 +2,8 @@ name: MiniMusic
 options:
   bundleIdPrefix: com.dhopkins
   deploymentTarget:
-    macOS: "14.0"
-  xcodeVersion: "15.0"
+    macOS: "26.0"
+  xcodeVersion: "26.0"
   minimumXcodeGenVersion: "2.38"
 
 packages:
@@ -28,7 +28,8 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.boulderhopkins.MiniMusic
         MARKETING_VERSION: "1.0.0"
         CURRENT_PROJECT_VERSION: "1"
-        SWIFT_VERSION: "5.9"
+        SWIFT_VERSION: "6.2"
+        SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
         CODE_SIGN_ENTITLEMENTS: MiniMusic/MiniMusic.entitlements
         GENERATE_INFOPLIST_FILE: true
         ENABLE_HARDENED_RUNTIME: true

@@ -19,14 +19,14 @@ struct MiniMusicApp: App {
         _searchVM = State(wrappedValue: searchVM)
 
         KeyboardShortcuts.onKeyDown(for: .toggleMiniMusic) {
-            Task { @MainActor in
+            Task {
                 if appState.isMenuPresented {
                     appState.isMenuPresented = false
                 } else {
                     searchVM.searchQuery = ""
                     searchVM.clearResults()
                     appState.isMenuPresented = true
-                    NSApp.activate(ignoringOtherApps: true)
+                    NSApp.activate()
                     try? await Task.sleep(for: .milliseconds(200))
                     appState.isSearchFieldFocused = true
                 }

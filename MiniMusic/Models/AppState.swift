@@ -8,7 +8,6 @@ enum NavigationDestination: Hashable {
     case library
 }
 
-@MainActor
 @Observable final class AppState {
     var authStatus: MusicAuthorization.Status = .notDetermined
     var currentDestination: NavigationDestination = .player

@@ -2,7 +2,7 @@
 
 A lightweight macOS menu bar player for Apple Music. Control playback, search your library and the catalog, manage your queue, and browse playlists — all from a small popover window.
 
-![macOS 14+](https://img.shields.io/badge/macOS-14%2B-blue) ![Swift 5.9](https://img.shields.io/badge/Swift-5.9-orange) ![SwiftUI](https://img.shields.io/badge/UI-SwiftUI-purple)
+![macOS 26+](https://img.shields.io/badge/macOS-26%2B-blue) ![Swift 6.2](https://img.shields.io/badge/Swift-6.2-orange) ![SwiftUI](https://img.shields.io/badge/UI-SwiftUI-purple)
 
 ## Features
 
@@ -16,9 +16,9 @@ A lightweight macOS menu bar player for Apple Music. Control playback, search yo
 
 ## Requirements
 
-- macOS 14 (Sonoma) or later
+- macOS 26 (Tahoe) or later
 - Apple Music subscription (for catalog search and playback)
-- Xcode 15+ (to build from source)
+- Xcode 26+ (to build from source)
 
 ## Install
 

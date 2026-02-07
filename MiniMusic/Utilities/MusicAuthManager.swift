@@ -2,7 +2,6 @@ import Foundation
 import MusicKit
 import Observation
 
-@MainActor
 @Observable final class MusicAuthManager {
     private(set) var status: MusicAuthorization.Status = .notDetermined
 
