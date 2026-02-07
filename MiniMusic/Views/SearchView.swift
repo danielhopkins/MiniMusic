@@ -5,6 +5,10 @@ struct SearchView: View {
     @EnvironmentObject var searchVM: MusicSearchViewModel
     @EnvironmentObject var appState: AppState
 
+    @State private var selectedIndex: Int?
+    @State private var keyMonitor: Any?
+    @Environment(\.dismiss) private var dismiss
+
     var body: some View {
         VStack(spacing: 0) {
             searchBar
@@ -12,6 +16,54 @@ struct SearchView: View {
             content
         }
         .navigationTitle("Search")
+        .onChange(of: searchVM.searchQuery) { _, _ in
+            selectedIndex = nil
+        }
+        .onAppear { installKeyMonitor() }
+        .onDisappear { removeKeyMonitor() }
+    }
+
+    // MARK: - Key Handling
+
+    private func installKeyMonitor() {
+        keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            switch Int(event.keyCode) {
+            case 125: // down arrow
+                moveSelection(by: 1)
+                return nil
+            case 126: // up arrow
+                moveSelection(by: -1)
+                return nil
+            case 36: // return
+                if let index = selectedIndex {
+                    let results = searchVM.allResults
+                    if index >= 0 && index < results.count {
+                        Task { await searchVM.playItem(results[index]) }
+                        searchVM.searchQuery = ""
+                        searchVM.clearResults()
+                        dismiss()
+                        return nil
+                    }
+                }
+                return event
+            case 53: // escape
+                if selectedIndex != nil {
+                    selectedIndex = nil
+                    return nil
+                }
+                dismiss()
+                return nil
+            default:
+                return event
+            }
+        }
+    }
+
+    private func removeKeyMonitor() {
+        if let monitor = keyMonitor {
+            NSEvent.removeMonitor(monitor)
+            keyMonitor = nil
+        }
     }
 
     // MARK: - Search Bar
@@ -59,73 +111,74 @@ struct SearchView: View {
     // MARK: - Results List
 
     private var resultsList: some View {
-        ScrollView {
-            LazyVStack(alignment: .leading, spacing: 0) {
-                if !searchVM.songs.isEmpty {
-                    sectionHeader("Songs")
-                    ForEach(searchVM.songs) { song in
+        let results = searchVM.allResults
+        let sectionStarts = computeSectionStarts(results)
+
+        return ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 0) {
+                    ForEach(Array(results.enumerated()), id: \.element.id) { index, item in
+                        if let header = sectionStarts[index] {
+                            sectionHeader(header)
+                        }
+
                         Button {
-                            Task { await searchVM.playSong(song) }
+                            Task { await searchVM.playItem(item) }
                         } label: {
                             SearchRow(
-                                title: song.title,
-                                subtitle: song.artistName,
-                                artwork: song.artwork
+                                title: item.title,
+                                subtitle: item.subtitle,
+                                artwork: item.artwork,
+                                isLibrary: item.isLibrary
                             )
+                            .background(
+                                selectedIndex == index
+                                    ? Color.accentColor.opacity(0.15)
+                                    : Color.clear
+                            )
+                            .cornerRadius(4)
                         }
                         .buttonStyle(.plain)
+                        .id(index)
                     }
                 }
-
-                if !searchVM.albums.isEmpty {
-                    sectionHeader("Albums")
-                    ForEach(searchVM.albums) { album in
-                        Button {
-                            Task { await searchVM.playAlbum(album) }
-                        } label: {
-                            SearchRow(
-                                title: album.title,
-                                subtitle: album.artistName,
-                                artwork: album.artwork
-                            )
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-
-                if !searchVM.artists.isEmpty {
-                    sectionHeader("Artists")
-                    ForEach(searchVM.artists) { artist in
-                        Button {
-                            Task { await searchVM.playTopSongForArtist(artist) }
-                        } label: {
-                            SearchRow(
-                                title: artist.name,
-                                subtitle: "Artist",
-                                artwork: artist.artwork
-                            )
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-
-                if !searchVM.playlists.isEmpty {
-                    sectionHeader("Playlists")
-                    ForEach(searchVM.playlists) { playlist in
-                        Button {
-                            Task { await searchVM.playPlaylist(playlist) }
-                        } label: {
-                            SearchRow(
-                                title: playlist.name,
-                                subtitle: playlist.curatorName ?? "Apple Music",
-                                artwork: playlist.artwork
-                            )
-                        }
-                        .buttonStyle(.plain)
+                .padding(.vertical, 4)
+            }
+            .onChange(of: selectedIndex) { _, newIndex in
+                if let newIndex {
+                    withAnimation {
+                        proxy.scrollTo(newIndex, anchor: .center)
                     }
                 }
             }
-            .padding(.vertical, 4)
+        }
+    }
+
+    private func computeSectionStarts(_ results: [SearchResultItem]) -> [Int: String] {
+        var starts: [Int: String] = [:]
+        var lastSection = ""
+        for (index, item) in results.enumerated() {
+            if item.sectionName != lastSection {
+                lastSection = item.sectionName
+                starts[index] = lastSection
+            }
+        }
+        return starts
+    }
+
+    // MARK: - Helpers
+
+    private func moveSelection(by offset: Int) {
+        let count = searchVM.allResults.count
+        guard count > 0 else { return }
+
+        if let current = selectedIndex {
+            let next = current + offset
+            if next >= 0 && next < count {
+                selectedIndex = next
+            }
+        } else {
+            selectedIndex = offset > 0 ? 0 : count - 1
         }
     }
 
@@ -146,6 +199,7 @@ private struct SearchRow: View {
     let title: String
     let subtitle: String
     let artwork: Artwork?
+    var isLibrary: Bool = false
 
     var body: some View {
         HStack(spacing: 10) {

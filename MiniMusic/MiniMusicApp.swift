@@ -1,12 +1,42 @@
-import SwiftUI
+import KeyboardShortcuts
+import MenuBarExtraAccess
 import MusicKit
+import SwiftUI
 
 @main
 struct MiniMusicApp: App {
-    @StateObject private var appState = AppState()
-    @StateObject private var authManager = MusicAuthManager()
-    @StateObject private var playerVM = PlayerViewModel()
-    @StateObject private var searchVM = MusicSearchViewModel()
+    @StateObject private var appState: AppState
+    @StateObject private var authManager: MusicAuthManager
+    @StateObject private var playerVM: PlayerViewModel
+    @StateObject private var searchVM: MusicSearchViewModel
+
+    init() {
+        let appState = AppState()
+        let authManager = MusicAuthManager()
+        let playerVM = PlayerViewModel()
+        let searchVM = MusicSearchViewModel()
+
+        _appState = StateObject(wrappedValue: appState)
+        _authManager = StateObject(wrappedValue: authManager)
+        _playerVM = StateObject(wrappedValue: playerVM)
+        _searchVM = StateObject(wrappedValue: searchVM)
+
+        KeyboardShortcuts.onKeyDown(for: .toggleMiniMusic) {
+            Task { @MainActor in
+                if appState.isMenuPresented {
+                    appState.isMenuPresented = false
+                } else {
+                    searchVM.searchQuery = ""
+                    searchVM.clearResults()
+                    appState.isMenuPresented = true
+                    NSApp.activate(ignoringOtherApps: true)
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                        appState.isSearchFieldFocused = true
+                    }
+                }
+            }
+        }
+    }
 
     var body: some Scene {
         MenuBarExtra("MiniMusic", systemImage: "music.note") {
@@ -23,6 +53,11 @@ struct MiniMusicApp: App {
             .environmentObject(searchVM)
         }
         .menuBarExtraStyle(.window)
+        .menuBarExtraAccess(isPresented: $appState.isMenuPresented)
+
+        Settings {
+            SettingsView()
+        }
     }
 
     private var authView: some View {

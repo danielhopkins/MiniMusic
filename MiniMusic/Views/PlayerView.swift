@@ -28,6 +28,14 @@ struct PlayerView: View {
                 }
         }
         .frame(width: 320, height: 400)
+        .onChange(of: appState.isSearchFieldFocused) { _, shouldFocus in
+            if shouldFocus {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    isSearchFocused = true
+                    appState.isSearchFieldFocused = false
+                }
+            }
+        }
     }
 
     @State private var navigationPath = NavigationPath()
@@ -267,7 +275,13 @@ struct PlayerView: View {
 
     private var bottomBar: some View {
         HStack {
-            Button {} label: {
+            Button {
+                appState.isMenuPresented = false
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                    NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+                    NSApp.activate(ignoringOtherApps: true)
+                }
+            } label: {
                 Image(systemName: "gearshape")
             }
             .buttonStyle(.plain)
