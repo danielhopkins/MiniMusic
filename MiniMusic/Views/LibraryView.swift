@@ -28,6 +28,7 @@ struct LibraryView: View {
             Spacer()
             ProgressView()
                 .controlSize(.small)
+                .frame(maxWidth: .infinity)
             Spacer()
         } else if let error = errorMessage {
             Spacer()
@@ -36,12 +37,19 @@ struct LibraryView: View {
                 .font(.caption)
                 .multilineTextAlignment(.center)
                 .padding()
+                .frame(maxWidth: .infinity)
             Spacer()
         } else if playlists.isEmpty && recentAlbums.isEmpty {
             Spacer()
-            Text("Your library is empty.")
-                .foregroundStyle(.secondary)
-                .font(.caption)
+            VStack(spacing: 8) {
+                Image(systemName: "music.note.house")
+                    .font(.system(size: 32))
+                    .foregroundStyle(.tertiary)
+                Text("Your library is empty")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity)
             Spacer()
         } else {
             libraryList

@@ -21,9 +21,15 @@ struct QueueView: View {
 
         if entries.isEmpty {
             Spacer()
-            Text("Queue is empty.")
-                .foregroundStyle(.secondary)
-                .font(.caption)
+            VStack(spacing: 8) {
+                Image(systemName: "list.bullet")
+                    .font(.system(size: 32))
+                    .foregroundStyle(.tertiary)
+                Text("Queue is empty")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity)
             Spacer()
         } else {
             ScrollView {

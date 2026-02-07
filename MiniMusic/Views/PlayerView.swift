@@ -12,6 +12,7 @@ struct PlayerView: View {
 
     @FocusState private var isSearchFocused: Bool
     @State private var navigationPath = NavigationPath()
+    @State private var isHoveringArtwork = false
 
     var body: some View {
         @Bindable var searchVM = searchVM
@@ -48,10 +49,10 @@ struct PlayerView: View {
             searchBar
             Divider()
             nowPlayingSection
-            Spacer(minLength: 4)
-            controlsSection
+                .padding(.top, 4)
             progressSection
-            Divider().padding(.top, 8)
+                .padding(.top, 6)
+            Divider().padding(.top, 4)
             navigationSection
             Divider()
             bottomBar
@@ -89,48 +90,73 @@ struct PlayerView: View {
     // MARK: - Now Playing
 
     private var nowPlayingSection: some View {
-        VStack(spacing: 6) {
-            // Album artwork
+        ZStack(alignment: .bottom) {
+            // Album artwork - fills available width
             if let url = playerVM.artworkURL {
                 AsyncImage(url: url) { image in
                     image
                         .resizable()
-                        .aspectRatio(contentMode: .fit)
+                        .aspectRatio(contentMode: .fill)
                 } placeholder: {
                     artworkPlaceholder
                 }
-                .frame(width: 120, height: 120)
-                .cornerRadius(8)
-                .shadow(radius: 2)
+                .frame(maxWidth: .infinity)
+                .frame(height: 240)
+                .contentShape(Rectangle())
+                .clipped()
             } else {
                 artworkPlaceholder
             }
 
-            // Track info
-            VStack(spacing: 2) {
-                Text(playerVM.currentTitle.isEmpty ? "Not Playing" : playerVM.currentTitle)
-                    .font(.headline)
-                    .lineLimit(1)
-
-                if !playerVM.currentArtist.isEmpty || !playerVM.currentAlbumTitle.isEmpty {
-                    Text(subtitleText)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+            // Gradient scrim + track info + controls overlay
+            VStack(spacing: 6) {
+                // Track info
+                VStack(spacing: 2) {
+                    Text(playerVM.currentTitle.isEmpty ? "Not Playing" : playerVM.currentTitle)
+                        .font(.headline)
                         .lineLimit(1)
+
+                    if !playerVM.currentArtist.isEmpty || !playerVM.currentAlbumTitle.isEmpty {
+                        Text(subtitleText)
+                            .font(.subheadline)
+                            .foregroundStyle(.white.opacity(0.7))
+                            .lineLimit(1)
+                    }
                 }
+
+                // Playback controls
+                controlsSection
             }
+            .padding(.horizontal, 16)
+            .padding(.bottom, 8)
+            .padding(.top, 24)
+            .frame(maxWidth: .infinity)
+            .background(
+                LinearGradient(
+                    colors: [.clear, .black.opacity(0.7)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            )
+            .foregroundStyle(.white)
+            .opacity(isHoveringArtwork ? 1 : 0)
         }
-        .padding(.horizontal, 16)
-        .padding(.top, 8)
+        .cornerRadius(8)
+        .padding(.horizontal, 8)
+        .onHover { hovering in
+            isHoveringArtwork = hovering
+        }
+        .animation(.easeInOut(duration: 0.2), value: isHoveringArtwork)
     }
 
     private var artworkPlaceholder: some View {
-        RoundedRectangle(cornerRadius: 8)
+        Rectangle()
             .fill(.quaternary)
-            .frame(width: 120, height: 120)
+            .frame(maxWidth: .infinity)
+            .frame(height: 240)
             .overlay {
                 Image(systemName: "music.note")
-                    .font(.largeTitle)
+                    .font(.system(size: 48))
                     .foregroundStyle(.tertiary)
             }
     }
