@@ -4,6 +4,7 @@ import SwiftUI
 struct LibraryView: View {
     @Environment(AppState.self) var appState
     @Environment(PlayerViewModel.self) private var playerVM
+    @Environment(\.dismiss) private var dismiss
 
     @State private var playlists: MusicItemCollection<Playlist> = []
     @State private var recentAlbums: MusicItemCollection<Album> = []
@@ -12,12 +13,34 @@ struct LibraryView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            header
+            Divider()
             content
         }
-        .navigationTitle("Library")
+        .navigationBarBackButtonHidden(true)
+        .toolbar(.hidden, for: .automatic)
         .task {
             await loadLibrary()
         }
+    }
+
+    // MARK: - Header
+
+    private var header: some View {
+        HStack(spacing: 6) {
+            Button { dismiss() } label: {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 14, weight: .semibold))
+            }
+            .buttonStyle(.plain)
+
+            Text("Library")
+                .font(.headline)
+
+            Spacer()
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
     }
 
     // MARK: - Content

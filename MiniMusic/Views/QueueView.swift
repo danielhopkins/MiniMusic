@@ -4,12 +4,35 @@ import SwiftUI
 struct QueueView: View {
     @Environment(AppState.self) var appState
     @Environment(PlayerViewModel.self) private var playerVM
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         VStack(spacing: 0) {
+            header
+            Divider()
             queueContent
         }
-        .navigationTitle("Queue")
+        .navigationBarBackButtonHidden(true)
+        .toolbar(.hidden, for: .automatic)
+    }
+
+    // MARK: - Header
+
+    private var header: some View {
+        HStack(spacing: 6) {
+            Button { dismiss() } label: {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 14, weight: .semibold))
+            }
+            .buttonStyle(.plain)
+
+            Text("Queue")
+                .font(.headline)
+
+            Spacer()
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
     }
 
     // MARK: - Queue Content

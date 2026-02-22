@@ -17,18 +17,39 @@ struct SearchView: View {
         @Bindable var searchVM = searchVM
 
         VStack(spacing: 0) {
+            header
+            Divider()
             searchBar
             Divider()
             content
         }
-        .padding(.top, -30)
-        .navigationTitle("Search")
+        .navigationBarBackButtonHidden(true)
+        .toolbar(.hidden, for: .automatic)
         .onChange(of: searchVM.searchQuery) { _, _ in
             selectedIndex = nil
         }
         .onAppear { installKeyMonitor() }
         .task { isSearchFocused = true }
         .onDisappear { removeKeyMonitor() }
+    }
+
+    // MARK: - Header
+
+    private var header: some View {
+        HStack(spacing: 6) {
+            Button { dismiss() } label: {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 14, weight: .semibold))
+            }
+            .buttonStyle(.plain)
+
+            Text("Search")
+                .font(.headline)
+
+            Spacer()
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
     }
 
     // MARK: - Key Handling
@@ -156,8 +177,7 @@ struct SearchView: View {
                         .accessibilityLabel("\(item.title), \(item.subtitle)")
                     }
                 }
-                .padding(.top, 4)
-                .padding(.bottom, 16)
+                .padding(.vertical, 4)
             }
             .onChange(of: selectedIndex) { _, newIndex in
                 if let newIndex {
