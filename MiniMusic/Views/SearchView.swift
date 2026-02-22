@@ -88,12 +88,7 @@ struct SearchView: View {
 
     @ViewBuilder
     private var content: some View {
-        if searchVM.isLoading {
-            Spacer()
-            ProgressView()
-                .controlSize(.small)
-            Spacer()
-        } else if let error = searchVM.errorMessage {
+        if let error = searchVM.errorMessage {
             Spacer()
             Text(error)
                 .foregroundStyle(.secondary)
@@ -101,20 +96,25 @@ struct SearchView: View {
                 .multilineTextAlignment(.center)
                 .padding()
             Spacer()
-        } else if searchVM.isEmpty {
+        } else if !searchVM.isEmpty {
+            resultsList
+        } else if searchVM.isLoading {
             Spacer()
-            if searchVM.searchQuery.isEmpty {
-                Text("Search for songs, albums, artists, and playlists.")
-                    .foregroundStyle(.secondary)
-                    .font(.caption)
-            } else {
-                Text("No results found.")
-                    .foregroundStyle(.secondary)
-                    .font(.caption)
-            }
+            ProgressView()
+                .controlSize(.small)
+            Spacer()
+        } else if searchVM.searchQuery.isEmpty {
+            Spacer()
+            Text("Search for songs, albums, artists, and playlists.")
+                .foregroundStyle(.secondary)
+                .font(.caption)
             Spacer()
         } else {
-            resultsList
+            Spacer()
+            Text("No results found.")
+                .foregroundStyle(.secondary)
+                .font(.caption)
+            Spacer()
         }
     }
 
@@ -154,7 +154,8 @@ struct SearchView: View {
                         .accessibilityLabel("\(item.title), \(item.subtitle)")
                     }
                 }
-                .padding(.vertical, 4)
+                .padding(.top, 4)
+                .padding(.bottom, 16)
             }
             .onChange(of: selectedIndex) { _, newIndex in
                 if let newIndex {

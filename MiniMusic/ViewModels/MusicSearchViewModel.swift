@@ -49,6 +49,15 @@ import Observation
     private func debounceSearch() {
         debounceTask?.cancel()
         let query = searchQuery
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if trimmed.isEmpty {
+            searchTask?.cancel()
+            clearResults()
+            return
+        }
+
+        isLoading = true
         debounceTask = Task {
             try? await Task.sleep(for: .milliseconds(300))
             guard !Task.isCancelled else { return }
