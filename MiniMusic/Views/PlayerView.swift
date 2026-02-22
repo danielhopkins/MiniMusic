@@ -1,5 +1,6 @@
-import SwiftUI
+import Combine
 import MusicKit
+import SwiftUI
 
 struct PlayerView: View {
     @Environment(PlayerViewModel.self) private var playerVM
@@ -39,6 +40,9 @@ struct PlayerView: View {
                 isSearchFocused = true
                 appState.isSearchFieldFocused = false
             }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .menuBarDismissed)) { _ in
+            navigationPath = NavigationPath()
         }
     }
 

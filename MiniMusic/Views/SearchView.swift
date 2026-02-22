@@ -8,6 +8,7 @@ struct SearchView: View {
 
     @State private var selectedIndex: Int?
     @State private var keyMonitor: Any?
+    @FocusState private var isSearchFocused: Bool
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -24,6 +25,7 @@ struct SearchView: View {
             selectedIndex = nil
         }
         .onAppear { installKeyMonitor() }
+        .task { isSearchFocused = true }
         .onDisappear { removeKeyMonitor() }
     }
 
@@ -78,6 +80,7 @@ struct SearchView: View {
 
         return TextField("Search Apple Music...", text: $searchVM.searchQuery)
             .textFieldStyle(.roundedBorder)
+            .focused($isSearchFocused)
             .padding(12)
     }
 
@@ -146,6 +149,7 @@ struct SearchView: View {
                             .clipShape(.rect(cornerRadius: 4))
                         }
                         .buttonStyle(.plain)
+                        .focusable(false)
                         .id(index)
                         .accessibilityLabel("\(item.title), \(item.subtitle)")
                     }

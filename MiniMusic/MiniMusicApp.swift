@@ -32,6 +32,18 @@ struct MiniMusicApp: App {
                 }
             }
         }
+
+        // Global event monitor — fires for mouse clicks outside the app's windows.
+        // This is the FluidMenuBarExtra/Shopify pattern. MenuBarExtraAccess's
+        // isPresented binding is broken on macOS 26 (never updates), so we bypass
+        // it entirely and post a notification that views can observe.
+        appState.globalClickMonitor = NSEvent.addGlobalMonitorForEvents(
+            matching: [.leftMouseDown, .rightMouseDown]
+        ) { _ in
+            searchVM.searchQuery = ""
+            searchVM.clearResults()
+            NotificationCenter.default.post(name: .menuBarDismissed, object: nil)
+        }
     }
 
     var body: some Scene {
