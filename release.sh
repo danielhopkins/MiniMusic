@@ -153,10 +153,10 @@ APPCAST_DIR="${BUILD_DIR}/appcast"
 mkdir -p "$APPCAST_DIR"
 cp "$DMG_PATH" "$APPCAST_DIR/"
 
-# Find Sparkle tools from SPM build artifacts or the xcarchive
-SPARKLE_BIN_DIR="${SCRIPT_DIR}/.build/artifacts/sparkle/Sparkle/bin"
-if [ ! -d "$SPARKLE_BIN_DIR" ]; then
-    SPARKLE_BIN_DIR=$(find "$ARCHIVE_PATH" -path "*/Sparkle.framework/Versions/B/bin" -type d | head -1)
+# Find Sparkle tools — check DerivedData SPM artifacts first, then .build/
+SPARKLE_BIN_DIR=$(find ~/Library/Developer/Xcode/DerivedData/MiniMusic-*/SourcePackages/artifacts/sparkle/Sparkle/bin -maxdepth 0 -type d 2>/dev/null | head -1)
+if [ -z "$SPARKLE_BIN_DIR" ]; then
+    SPARKLE_BIN_DIR="${SCRIPT_DIR}/.build/artifacts/sparkle/Sparkle/bin"
 fi
 if [ -z "$SPARKLE_BIN_DIR" ] || [ ! -d "$SPARKLE_BIN_DIR" ]; then
     echo "WARNING: Sparkle bin directory not found — skipping appcast generation"
