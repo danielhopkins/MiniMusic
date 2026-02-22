@@ -25,11 +25,24 @@ KEYCHAIN_PROFILE="MiniMusic"
 
 cd "$SCRIPT_DIR"
 
-# ── 1. Bump version ─────────────────────────────────────────────────
+# ── 1. Bump version (CalVer: YY.MMDD.Patch) ─────────────────────────
 CURRENT_VERSION=$(grep 'MARKETING_VERSION:' "$PROJECT_YML" | sed 's/.*"\(.*\)"/\1/')
-IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
-NEW_PATCH=$((PATCH + 1))
-NEW_VERSION="${MAJOR}.${MINOR}.${NEW_PATCH}"
+YY=$(date +%y)
+# MMDD with no leading zero (e.g. Feb 10 → 210, not 0210)
+MMDD=$(date +%-m%d)
+DAY_PREFIX="v${YY}.${MMDD}."
+
+# Find highest patch for today from git tags
+MAX_PATCH=-1
+for tag in $(git tag -l "${DAY_PREFIX}*" 2>/dev/null); do
+    P="${tag#${DAY_PREFIX}}"
+    if [[ "$P" =~ ^[0-9]+$ ]] && (( P > MAX_PATCH )); then
+        MAX_PATCH=$P
+    fi
+done
+NEW_PATCH=$((MAX_PATCH + 1))
+NEW_VERSION="${YY}.${MMDD}.${NEW_PATCH}"
+
 sed -i '' "s/MARKETING_VERSION: \"${CURRENT_VERSION}\"/MARKETING_VERSION: \"${NEW_VERSION}\"/" "$PROJECT_YML"
 echo "Version: ${CURRENT_VERSION} → ${NEW_VERSION}"
 
