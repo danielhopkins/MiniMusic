@@ -19,6 +19,8 @@
 		6B4DE8F856015ADC96740C72 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 931F29EBBD06132F1363A487 /* AppState.swift */; };
 		6F7187FD19F5520E61BC93CD /* MusicSearchViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DD97EAD836C0AE639E9D335 /* MusicSearchViewModel.swift */; };
 		998E3E4E888201D574EB40F5 /* MenuBarExtraAccess in Frameworks */ = {isa = PBXBuildFile; productRef = 5F8B4553ABC60B796A7551BA /* MenuBarExtraAccess */; };
+		A9EE185FF0689343B4C9F972 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 19066F0D5E9D9DF1FB5D02A0 /* Sparkle */; };
+		B81E723D5907A40810054552 /* SoftwareUpdater.swift in Sources */ = {isa = PBXBuildFile; fileRef = DCE90B072DE13C8223F61CB9 /* SoftwareUpdater.swift */; };
 		C6A24F1AF8C4057482EE5E86 /* SearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C8E20349B997701EB247115 /* SearchView.swift */; };
 		EDD24C878D7F06EA4323527D /* MiniMusicApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08EE9289A82094567CBB61EC /* MiniMusicApp.swift */; };
 		F3DEBDF5D6F0C1C0F4FEEA1F /* SearchResultItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D7243D75C3334AEBED82454 /* SearchResultItem.swift */; };
@@ -39,6 +41,7 @@
 		931F29EBBD06132F1363A487 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
 		A3077985A66AA4EED85CF303 /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
 		C224F8475F08BF0257F7EFBA /* PlayerViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerViewModel.swift; sourceTree = "<group>"; };
+		DCE90B072DE13C8223F61CB9 /* SoftwareUpdater.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoftwareUpdater.swift; sourceTree = "<group>"; };
 		F942F9B2FFFD5EE7382859E0 /* HotkeyNames.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeyNames.swift; sourceTree = "<group>"; };
 		FBBB6B858F57BFE3BFE287E7 /* MusicAuthManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MusicAuthManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -50,6 +53,7 @@
 			files = (
 				63BB4B83251EA08BE6D71F89 /* KeyboardShortcuts in Frameworks */,
 				998E3E4E888201D574EB40F5 /* MenuBarExtraAccess in Frameworks */,
+				A9EE185FF0689343B4C9F972 /* Sparkle in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -61,6 +65,7 @@
 			children = (
 				F942F9B2FFFD5EE7382859E0 /* HotkeyNames.swift */,
 				FBBB6B858F57BFE3BFE287E7 /* MusicAuthManager.swift */,
+				DCE90B072DE13C8223F61CB9 /* SoftwareUpdater.swift */,
 			);
 			path = Utilities;
 			sourceTree = "<group>";
@@ -145,6 +150,7 @@
 			packageProductDependencies = (
 				F66F70B0830493D1A1CDDE82 /* KeyboardShortcuts */,
 				5F8B4553ABC60B796A7551BA /* MenuBarExtraAccess */,
+				19066F0D5E9D9DF1FB5D02A0 /* Sparkle */,
 			);
 			productName = MiniMusic;
 			productReference = 6105548089F129EBFD6F7693 /* MiniMusic.app */;
@@ -177,6 +183,7 @@
 			packageReferences = (
 				1C0A51325D857A2E2F7D6307 /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */,
 				50D30CC765389823395455DB /* XCRemoteSwiftPackageReference "MenuBarExtraAccess" */,
+				051E14F7D00047FBCAE7B2A5 /* XCRemoteSwiftPackageReference "Sparkle" */,
 			);
 			preferredProjectObjectVersion = 77;
 			projectDirPath = "";
@@ -215,6 +222,7 @@
 				F3DEBDF5D6F0C1C0F4FEEA1F /* SearchResultItem.swift in Sources */,
 				C6A24F1AF8C4057482EE5E86 /* SearchView.swift in Sources */,
 				3EB7502DE703FE133B679603 /* SettingsView.swift in Sources */,
+				B81E723D5907A40810054552 /* SoftwareUpdater.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -420,6 +428,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		051E14F7D00047FBCAE7B2A5 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sparkle-project/Sparkle";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.0.0;
+			};
+		};
 		1C0A51325D857A2E2F7D6307 /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/sindresorhus/KeyboardShortcuts";
@@ -439,6 +455,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		19066F0D5E9D9DF1FB5D02A0 /* Sparkle */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 051E14F7D00047FBCAE7B2A5 /* XCRemoteSwiftPackageReference "Sparkle" */;
+			productName = Sparkle;
+		};
 		5F8B4553ABC60B796A7551BA /* MenuBarExtraAccess */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 50D30CC765389823395455DB /* XCRemoteSwiftPackageReference "MenuBarExtraAccess" */;

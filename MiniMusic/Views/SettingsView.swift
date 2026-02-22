@@ -2,6 +2,8 @@ import KeyboardShortcuts
 import SwiftUI
 
 struct SettingsView: View {
+    @Environment(SoftwareUpdater.self) private var softwareUpdater
+
     private var appVersion: String {
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"
         let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "?"
@@ -13,6 +15,10 @@ struct SettingsView: View {
             Form {
                 KeyboardShortcuts.Recorder("Open MiniMusic:", name: .toggleMiniMusic)
                 LabeledContent("Version", value: appVersion)
+                Button("Check for Updates...") {
+                    softwareUpdater.checkForUpdates()
+                }
+                .disabled(!softwareUpdater.canCheckForUpdates)
             }
             .formStyle(.columns)
 

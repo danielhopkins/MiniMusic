@@ -134,11 +134,72 @@ echo "DMG notarization complete."
 echo "Stapling DMG..."
 xcrun stapler staple "$DMG_PATH"
 
-# ── 11. Summary ──────────────────────────────────────────────────────
+# ── 11. Tag and create GitHub release ─────────────────────────────────
+git add "$PROJECT_YML"
+git commit -m "Bump version to ${NEW_VERSION} (build ${NEW_BUILD})"
+git tag "v${NEW_VERSION}"
+git push origin main "v${NEW_VERSION}"
+echo "Tagged v${NEW_VERSION}"
+
+echo "Creating GitHub release..."
+gh release create "v${NEW_VERSION}" "$DMG_PATH" \
+    --title "${APP_NAME} ${NEW_VERSION}" \
+    --generate-notes
+echo "GitHub release created."
+
+# ── 12. Generate Sparkle appcast and publish to GitHub Pages ─────────
+echo "Generating Sparkle appcast..."
+APPCAST_DIR="${BUILD_DIR}/appcast"
+mkdir -p "$APPCAST_DIR"
+cp "$DMG_PATH" "$APPCAST_DIR/"
+
+# Find Sparkle tools from SPM build artifacts or the xcarchive
+SPARKLE_BIN_DIR="${SCRIPT_DIR}/.build/artifacts/sparkle/Sparkle/bin"
+if [ ! -d "$SPARKLE_BIN_DIR" ]; then
+    SPARKLE_BIN_DIR=$(find "$ARCHIVE_PATH" -path "*/Sparkle.framework/Versions/B/bin" -type d | head -1)
+fi
+if [ -z "$SPARKLE_BIN_DIR" ] || [ ! -d "$SPARKLE_BIN_DIR" ]; then
+    echo "WARNING: Sparkle bin directory not found — skipping appcast generation"
+else
+    # Sign the DMG for Sparkle (EdDSA)
+    SIGN_OUTPUT=$("$SPARKLE_BIN_DIR/sign_update" "$DMG_PATH")
+    echo "$SIGN_OUTPUT"
+
+    # Generate appcast.xml with download URLs pointing to GitHub Releases
+    DOWNLOAD_URL_PREFIX="https://github.com/danielhopkins/MiniMusic/releases/download/v${NEW_VERSION}/"
+    "$SPARKLE_BIN_DIR/generate_appcast" \
+        --download-url-prefix "$DOWNLOAD_URL_PREFIX" \
+        "$APPCAST_DIR"
+
+    # Patch in EdDSA signature if generate_appcast didn't include it
+    if ! grep -q 'sparkle:edSignature' "${APPCAST_DIR}/appcast.xml"; then
+        ED_SIG=$(echo "$SIGN_OUTPUT" | grep -o 'sparkle:edSignature="[^"]*"')
+        if [ -n "$ED_SIG" ]; then
+            sed -i '' "s|<enclosure |<enclosure ${ED_SIG} |" "${APPCAST_DIR}/appcast.xml"
+            echo "Patched EdDSA signature into appcast.xml"
+        fi
+    fi
+
+    # Publish appcast.xml to gh-pages branch
+    GH_PAGES_DIR="${BUILD_DIR}/gh-pages"
+    git worktree add "$GH_PAGES_DIR" gh-pages 2>/dev/null || true
+    cp "${APPCAST_DIR}/appcast.xml" "$GH_PAGES_DIR/"
+    cd "$GH_PAGES_DIR"
+    git add appcast.xml
+    git commit -m "Update appcast for v${NEW_VERSION}" || echo "No appcast changes to commit"
+    git push origin gh-pages
+    cd "$SCRIPT_DIR"
+    git worktree remove "$GH_PAGES_DIR"
+    echo "Appcast published to GitHub Pages."
+fi
+
+# ── 13. Summary ──────────────────────────────────────────────────────
 DMG_SIZE=$(du -h "$DMG_PATH" | cut -f1 | xargs)
+RELEASE_URL=$(gh release view "v${NEW_VERSION}" --json url -q .url)
 echo ""
 echo "════════════════════════════════════════"
 echo "  ${APP_NAME} ${NEW_VERSION} (${NEW_BUILD})"
 echo "  DMG: ${DMG_PATH}"
 echo "  Size: ${DMG_SIZE}"
+echo "  Release: ${RELEASE_URL}"
 echo "════════════════════════════════════════"

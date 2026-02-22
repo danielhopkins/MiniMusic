@@ -9,6 +9,7 @@ struct MiniMusicApp: App {
     @State private var authManager: MusicAuthManager
     @State private var playerVM: PlayerViewModel
     @State private var searchVM: MusicSearchViewModel
+    @State private var softwareUpdater = SoftwareUpdater()
 
     init() {
         let appState = AppState()
@@ -67,6 +68,7 @@ struct MiniMusicApp: App {
 
         Settings {
             SettingsView()
+                .environment(softwareUpdater)
         }
     }
 

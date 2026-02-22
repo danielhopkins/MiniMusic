@@ -16,6 +16,9 @@ packages:
   MenuBarExtraAccess:
     url: https://github.com/orchetect/MenuBarExtraAccess
     majorVersion: 1.0.0
+  Sparkle:
+    url: https://github.com/sparkle-project/Sparkle
+    majorVersion: 2.0.0
 
 targets:
   MiniMusic:
@@ -26,6 +29,7 @@ targets:
     dependencies:
       - package: KeyboardShortcuts
       - package: MenuBarExtraAccess
+      - package: Sparkle
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.boulderhopkins.MiniMusic
@@ -54,6 +58,8 @@ targets:
       path: MiniMusic/Info.plist
       properties:
         LSUIElement: true
+        SUFeedURL: "https://danielhopkins.github.io/MiniMusic/appcast.xml"
+        SUPublicEDKey: "0N7vplFwWm4Hv5gUTZh6cOTXyI3LCaYPbJCtrXkiCnI="
         NSAppleMusicUsageDescription: "MiniMusic needs access to your Apple Music library to play music and show your playlists."
     entitlements:
       path: MiniMusic/MiniMusic.entitlements

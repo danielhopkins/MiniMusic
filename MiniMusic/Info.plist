@@ -22,5 +22,9 @@
 	<true/>
 	<key>NSAppleMusicUsageDescription</key>
 	<string>MiniMusic needs access to your Apple Music library to play music and show your playlists.</string>
+	<key>SUFeedURL</key>
+	<string>https://danielhopkins.github.io/MiniMusic/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>0N7vplFwWm4Hv5gUTZh6cOTXyI3LCaYPbJCtrXkiCnI=</string>
 </dict>
 </plist>
