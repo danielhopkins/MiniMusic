@@ -126,7 +126,7 @@ struct SearchView: View {
 
         return ScrollViewReader { proxy in
             ScrollView {
-                LazyVStack(alignment: .leading, spacing: 0) {
+                VStack(alignment: .leading, spacing: 0) {
                     ForEach(Array(results.enumerated()), id: \.element.id) { index, item in
                         if let header = sectionStarts[index] {
                             sectionHeader(header)
