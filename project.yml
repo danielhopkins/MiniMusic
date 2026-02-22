@@ -30,7 +30,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.boulderhopkins.MiniMusic
         MARKETING_VERSION: "26.222.0"
-        CURRENT_PROJECT_VERSION: "6"
+        CURRENT_PROJECT_VERSION: "7"
         SWIFT_VERSION: "6.2"
         SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
         DEVELOPMENT_TEAM: 25RCAA3JLJ
