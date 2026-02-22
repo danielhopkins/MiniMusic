@@ -8,6 +8,8 @@ struct SearchView: View {
 
     @State private var selectedIndex: Int?
     @State private var keyMonitor: Any?
+    @State private var favoritedIDs: Set<String> = []
+    @State private var addedToLibraryIDs: Set<String> = []
     @FocusState private var isSearchFocused: Bool
     @Environment(\.dismiss) private var dismiss
 
@@ -132,24 +134,24 @@ struct SearchView: View {
                             sectionHeader(header)
                         }
 
-                        Button {
-                            playerVM.playItem(item)
-                        } label: {
+                        HStack(spacing: 0) {
                             SearchRow(
                                 title: item.title,
                                 subtitle: item.subtitle,
                                 artwork: item.artwork,
                                 isLibrary: item.isLibrary
                             )
-                            .background(
-                                selectedIndex == index
-                                    ? Color.accentColor.opacity(0.15)
-                                    : Color.clear
-                            )
-                            .clipShape(.rect(cornerRadius: 4))
+                            .onTapGesture { playerVM.playItem(item) }
+
+                            actionButtons(for: item)
                         }
-                        .buttonStyle(.plain)
-                        .focusable(false)
+                        .background(
+                            selectedIndex == index
+                                ? Color.accentColor.opacity(0.15)
+                                : Color.clear
+                        )
+                        .clipShape(.rect(cornerRadius: 4))
+                        .contextMenu { contextMenuItems(for: item) }
                         .id(index)
                         .accessibilityLabel("\(item.title), \(item.subtitle)")
                     }
@@ -204,6 +206,116 @@ struct SearchView: View {
             .padding(.top, 8)
             .padding(.bottom, 4)
     }
+
+    // MARK: - Context Menu
+
+    @ViewBuilder
+    private func actionButtons(for item: SearchResultItem) -> some View {
+        if !item.isArtist {
+            HStack(spacing: 2) {
+                if item.isLibrary || addedToLibraryIDs.contains(item.id) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .frame(width: 24, height: 24)
+                } else {
+                    Button { addToLibrary(item) } label: {
+                        Image(systemName: "plus.circle")
+                            .frame(width: 24, height: 24)
+                            .contentShape(Rectangle())
+                    }
+                }
+                Button { favoriteItem(item) } label: {
+                    Image(systemName: favoritedIDs.contains(item.id) ? "star.fill" : "star")
+                        .frame(width: 24, height: 24)
+                        .contentShape(Rectangle())
+                }
+            }
+            .font(.system(size: 13))
+            .foregroundStyle(.secondary)
+            .buttonStyle(.borderless)
+            .padding(.trailing, 8)
+        }
+    }
+
+    @ViewBuilder
+    private func contextMenuItems(for item: SearchResultItem) -> some View {
+        if !item.isLibrary && !item.isArtist {
+            if addedToLibraryIDs.contains(item.id) {
+                Button("Added to Library", systemImage: "checkmark.circle.fill") {}
+                    .disabled(true)
+            } else {
+                Button("Add to Library", systemImage: "plus") {
+                    addToLibrary(item)
+                }
+            }
+        }
+        if !item.isArtist {
+            Button(
+                favoritedIDs.contains(item.id) ? "Favorited" : "Favorite",
+                systemImage: favoritedIDs.contains(item.id) ? "star.fill" : "star"
+            ) {
+                favoriteItem(item)
+            }
+        }
+    }
+
+    private func addToLibrary(_ item: SearchResultItem) {
+        Task {
+            do {
+                let (type, id) = try libraryAddResource(for: item)
+                let url = URL(string: "https://api.music.apple.com/v1/me/library?ids[\(type)]=\(id.rawValue)")!
+                var urlRequest = URLRequest(url: url)
+                urlRequest.httpMethod = "POST"
+                let request = MusicDataRequest(urlRequest: urlRequest)
+                let _ = try await request.response()
+                addedToLibraryIDs.insert(item.id)
+            } catch {
+                print("Failed to add to library: \(error)")
+            }
+        }
+    }
+
+    private func libraryAddResource(for item: SearchResultItem) throws -> (String, MusicItemID) {
+        switch item {
+        case .catalogSong(let s): return ("songs", s.id)
+        case .catalogAlbum(let a): return ("albums", a.id)
+        case .catalogPlaylist(let p): return ("playlists", p.id)
+        default: throw CancellationError()
+        }
+    }
+
+    private func favoriteItem(_ item: SearchResultItem) {
+        Task {
+            do {
+                let (resourceType, itemId) = try ratingResource(for: item)
+                let url = URL(string: "https://api.music.apple.com/v1/me/ratings/\(resourceType)/\(itemId.rawValue)")!
+                var urlRequest = URLRequest(url: url)
+                urlRequest.httpMethod = "PUT"
+                urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+                urlRequest.httpBody = try JSONSerialization.data(withJSONObject: [
+                    "type": "rating",
+                    "attributes": ["value": 1],
+                ])
+                let request = MusicDataRequest(urlRequest: urlRequest)
+                let _ = try await request.response()
+                favoritedIDs.insert(item.id)
+            } catch {
+                print("Failed to favorite: \(error)")
+            }
+        }
+    }
+
+    private func ratingResource(for item: SearchResultItem) throws -> (String, MusicItemID) {
+        switch item {
+        case .catalogSong(let s): return ("songs", s.id)
+        case .librarySong(let s): return ("library-songs", s.id)
+        case .catalogAlbum(let a): return ("albums", a.id)
+        case .libraryAlbum(let a): return ("library-albums", a.id)
+        case .catalogPlaylist(let p): return ("playlists", p.id)
+        case .libraryPlaylist(let p): return ("library-playlists", p.id)
+        case .catalogArtist, .libraryArtist:
+            throw CancellationError()
+        }
+    }
 }
 
 // MARK: - Search Row
@@ -241,7 +353,7 @@ private struct SearchRow: View {
                     .lineLimit(1)
             }
 
-            Spacer()
+            Spacer(minLength: 0)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 6)

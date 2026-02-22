@@ -70,6 +70,13 @@ enum SearchResultItem: Identifiable, Equatable {
         }
     }
 
+    var isArtist: Bool {
+        switch self {
+        case .libraryArtist, .catalogArtist: return true
+        default: return false
+        }
+    }
+
     static func == (lhs: SearchResultItem, rhs: SearchResultItem) -> Bool {
         lhs.id == rhs.id
     }

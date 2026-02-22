@@ -27,15 +27,24 @@ import Observation
     }
 
     var allResults: [SearchResultItem] {
+        let librarySongKeys = Set(librarySongs.map { "\($0.title)\n\($0.artistName)" })
+        let libraryAlbumKeys = Set(libraryAlbums.map { "\($0.title)\n\($0.artistName)" })
+        let libraryArtistKeys = Set(libraryArtists.map { $0.name })
+        let libraryPlaylistKeys = Set(libraryPlaylists.map { $0.name })
+
         var items: [SearchResultItem] = []
         items += librarySongs.map { .librarySong($0) }
         items += libraryAlbums.map { .libraryAlbum($0) }
         items += libraryArtists.map { .libraryArtist($0) }
         items += libraryPlaylists.map { .libraryPlaylist($0) }
-        items += songs.map { .catalogSong($0) }
-        items += albums.map { .catalogAlbum($0) }
-        items += artists.map { .catalogArtist($0) }
-        items += playlists.map { .catalogPlaylist($0) }
+        items += songs.filter { !librarySongKeys.contains("\($0.title)\n\($0.artistName)") }
+            .map { .catalogSong($0) }
+        items += albums.filter { !libraryAlbumKeys.contains("\($0.title)\n\($0.artistName)") }
+            .map { .catalogAlbum($0) }
+        items += artists.filter { !libraryArtistKeys.contains($0.name) }
+            .map { .catalogArtist($0) }
+        items += playlists.filter { !libraryPlaylistKeys.contains($0.name) }
+            .map { .catalogPlaylist($0) }
         return items
     }
 
@@ -48,18 +57,17 @@ import Observation
 
     private func debounceSearch() {
         debounceTask?.cancel()
+        searchTask?.cancel()
         let query = searchQuery
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
 
         if trimmed.isEmpty {
-            searchTask?.cancel()
             clearResults()
             return
         }
 
-        isLoading = true
         debounceTask = Task {
-            try? await Task.sleep(for: .milliseconds(300))
+            try? await Task.sleep(for: .milliseconds(500))
             guard !Task.isCancelled else { return }
             performSearch(query: query)
         }
