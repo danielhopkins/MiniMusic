@@ -10,15 +10,13 @@ enum NavigationDestination: Hashable {
 
 extension Notification.Name {
     static let menuBarDismissed = Notification.Name("MiniMusic.menuBarDismissed")
+    static let openSettingsRequested = Notification.Name("MiniMusic.openSettingsRequested")
 }
 
 @Observable final class AppState {
     var authStatus: MusicAuthorization.Status = .notDetermined
     var currentDestination: NavigationDestination = .player
     var isSearchFieldFocused: Bool = false
-    var isMenuPresented: Bool = false
-
-    @ObservationIgnored var globalClickMonitor: Any?
 
     var isAuthorized: Bool {
         authStatus == .authorized

@@ -6,7 +6,6 @@ struct PlayerView: View {
     @Environment(PlayerViewModel.self) private var playerVM
     @Environment(MusicSearchViewModel.self) private var searchVM
     @Environment(AppState.self) private var appState
-    @Environment(\.openSettings) private var openSettings
 
     @State private var isSeeking = false
     @State private var seekTime: TimeInterval = 0
@@ -85,9 +84,7 @@ struct PlayerView: View {
                     }
                 }
             Button {
-                appState.isMenuPresented = false
-                openSettings()
-                NSApp.activate()
+                NotificationCenter.default.post(name: .openSettingsRequested, object: nil)
             } label: {
                 Image(systemName: "gearshape")
                     .foregroundStyle(.secondary)
@@ -103,19 +100,19 @@ struct PlayerView: View {
 
     private var nowPlayingSection: some View {
         ZStack(alignment: .bottom) {
-            // Album artwork - fills available width
-            if let url = playerVM.artworkURL {
-                AsyncImage(url: url) { image in
-                    image
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                } placeholder: {
-                    artworkPlaceholder
-                }
-                .frame(maxWidth: .infinity)
-                .frame(height: 240)
-                .contentShape(Rectangle())
-                .clipped()
+            // Album artwork - fills available width, cropped to a fixed height.
+            // `ArtworkImage` is a fixed-size view, so anchor the layout to a sized
+            // container and clip the artwork into it (a plain `.frame(height:)`
+            // doesn't constrain it and lets the panel grow).
+            if let artwork = playerVM.artwork {
+                Color.clear
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 240)
+                    .overlay {
+                        ArtworkImage(artwork, width: 320, height: 320)
+                    }
+                    .contentShape(Rectangle())
+                    .clipped()
             } else {
                 artworkPlaceholder
             }
