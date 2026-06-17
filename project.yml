@@ -5,17 +5,14 @@ configs:
 options:
   bundleIdPrefix: com.dhopkins
   deploymentTarget:
-    macOS: "26.0"
-  xcodeVersion: "26.0"
+    macOS: "27.0"
+  xcodeVersion: "27.0"
   minimumXcodeGenVersion: "2.38"
 
 packages:
   KeyboardShortcuts:
     url: https://github.com/sindresorhus/KeyboardShortcuts
     majorVersion: 2.0.0
-  MenuBarExtraAccess:
-    url: https://github.com/orchetect/MenuBarExtraAccess
-    majorVersion: 1.0.0
   Sparkle:
     url: https://github.com/sparkle-project/Sparkle
     majorVersion: 2.0.0
@@ -28,13 +25,12 @@ targets:
       - MiniMusic
     dependencies:
       - package: KeyboardShortcuts
-      - package: MenuBarExtraAccess
       - package: Sparkle
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.boulderhopkins.MiniMusic
-        MARKETING_VERSION: "26.222.1"
-        CURRENT_PROJECT_VERSION: "9"
+        MARKETING_VERSION: "26.617.0"
+        CURRENT_PROJECT_VERSION: "10"
         SWIFT_VERSION: "6.2"
         SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
         DEVELOPMENT_TEAM: 25RCAA3JLJ

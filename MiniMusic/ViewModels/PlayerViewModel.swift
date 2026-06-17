@@ -10,7 +10,7 @@ import Observation
     private(set) var currentTitle: String = ""
     private(set) var currentArtist: String = ""
     private(set) var currentAlbumTitle: String = ""
-    private(set) var artworkURL: URL?
+    private(set) var artwork: Artwork?
     private(set) var isPlaying: Bool = false
     private(set) var playbackTime: TimeInterval = 0
     private(set) var duration: TimeInterval = 0
@@ -144,10 +144,14 @@ import Observation
     }
 
     func addToQueue(_ song: Song) {
-        let queue = player.queue
-        Task {
-            try? await queue.insert(song, position: .tail)
-        }
+        Task { await Self.enqueue(song) }
+    }
+
+    /// `ApplicationMusicPlayer.Queue.insert` is a `@concurrent` method on a
+    /// non-Sendable `Queue`, so it can't be called with a main-actor-isolated
+    /// queue value. Access the shared player off the main actor instead.
+    private nonisolated static func enqueue(_ song: Song) async {
+        try? await ApplicationMusicPlayer.shared.queue.insert(song, position: .tail)
     }
 
     // MARK: - Observation
@@ -179,19 +183,14 @@ import Observation
             currentTitle = ""
             currentArtist = ""
             currentAlbumTitle = ""
-            artworkURL = nil
+            artwork = nil
             duration = 0
             return
         }
 
         currentTitle = entry.title
         currentArtist = entry.subtitle ?? ""
-
-        if let artwork = entry.artwork {
-            artworkURL = artwork.url(width: 240, height: 240)
-        } else {
-            artworkURL = nil
-        }
+        artwork = entry.artwork
 
         // Fetch full song metadata for album title and duration
         if case let .song(song) = entry.item {

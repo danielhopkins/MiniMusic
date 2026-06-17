@@ -349,14 +349,8 @@ private struct SearchRow: View {
     var body: some View {
         HStack(spacing: 10) {
             if let artwork {
-                AsyncImage(url: artwork.url(width: 40, height: 40)) { image in
-                    image.resizable()
-                } placeholder: {
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(.quaternary)
-                }
-                .frame(width: 36, height: 36)
-                .clipShape(.rect(cornerRadius: 4))
+                ArtworkImage(artwork, width: 36, height: 36)
+                    .clipShape(.rect(cornerRadius: 4))
             } else {
                 RoundedRectangle(cornerRadius: 4)
                     .fill(.quaternary)
