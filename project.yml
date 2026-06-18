@@ -55,7 +55,7 @@ targets:
       properties:
         LSUIElement: true
         SUFeedURL: "https://danielhopkins.github.io/MiniMusic/appcast.xml"
-        SUPublicEDKey: "0N7vplFwWm4Hv5gUTZh6cOTXyI3LCaYPbJCtrXkiCnI="
+        SUPublicEDKey: "tWN9BPX76XAcg0LFWtnQ9uKBCeDSM59qkfn1ioAo2JY="
         NSAppleMusicUsageDescription: "MiniMusic needs access to your Apple Music library to play music and show your playlists."
     entitlements:
       path: MiniMusic/MiniMusic.entitlements
