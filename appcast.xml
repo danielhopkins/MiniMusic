@@ -8,6 +8,13 @@
             <sparkle:version>12</sparkle:version>
             <sparkle:shortVersionString>26.618.1</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>27.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[
+                <ul>
+                    <li>Now compatible with macOS 27.</li>
+                    <li>Fixed the global hotkey (Option+Space) not opening the window.</li>
+                    <li>Fixed album artwork not appearing.</li>
+                </ul>
+            ]]></description>
             <enclosure url="https://github.com/danielhopkins/MiniMusic/releases/download/v26.618.1/MiniMusic.dmg" length="3746726" type="application/octet-stream" sparkle:edSignature="l/tXqxVZYvcUk26X5ncyaLab4b+TUps0m9B58d4dDJ2kQ1Sf8b/kccIxHqBqV3PIs1xk50dScNJ2HKVdnLnrAw=="/>
         </item>
     </channel>
