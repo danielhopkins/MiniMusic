@@ -3,19 +3,12 @@
     <channel>
         <title>MiniMusic</title>
         <item>
-            <title>26.618.1</title>
-            <pubDate>Thu, 18 Jun 2026 10:45:06 -0600</pubDate>
-            <sparkle:version>12</sparkle:version>
-            <sparkle:shortVersionString>26.618.1</sparkle:shortVersionString>
+            <title>26.625.0</title>
+            <pubDate>Thu, 25 Jun 2026 12:01:09 -0600</pubDate>
+            <sparkle:version>13</sparkle:version>
+            <sparkle:shortVersionString>26.625.0</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>27.0</sparkle:minimumSystemVersion>
-            <description><![CDATA[
-                <ul>
-                    <li>Now compatible with macOS 27.</li>
-                    <li>Fixed the global hotkey (Option+Space) not opening the window.</li>
-                    <li>Fixed album artwork not appearing.</li>
-                </ul>
-            ]]></description>
-            <enclosure url="https://github.com/danielhopkins/MiniMusic/releases/download/v26.618.1/MiniMusic.dmg" length="3746726" type="application/octet-stream" sparkle:edSignature="l/tXqxVZYvcUk26X5ncyaLab4b+TUps0m9B58d4dDJ2kQ1Sf8b/kccIxHqBqV3PIs1xk50dScNJ2HKVdnLnrAw=="/>
+            <enclosure url="https://github.com/danielhopkins/MiniMusic/releases/download/v26.625.0/MiniMusic.dmg" length="3782309" type="application/octet-stream" sparkle:edSignature="6cx35t6BwujLp8LTG7EEoQJOCjvjT2Me7MQeP6QICWIx30WZktm86znQ2u0c5cL5p1JpAG6UA0yuWW2693jcCw=="/>
         </item>
     </channel>
 </rss>
