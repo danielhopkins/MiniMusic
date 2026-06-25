@@ -135,7 +135,9 @@ echo "Stapling DMG..."
 xcrun stapler staple "$DMG_PATH"
 
 # ── 11. Tag and create GitHub release ─────────────────────────────────
-git add "$PROJECT_YML"
+# Include the regenerated Xcode project (step 2 runs `xcodegen generate`) so
+# the working tree isn't left dirty after a release.
+git add "$PROJECT_YML" MiniMusic.xcodeproj
 git commit -m "Bump version to ${NEW_VERSION} (build ${NEW_BUILD})"
 git tag "v${NEW_VERSION}"
 git push origin main "v${NEW_VERSION}"
