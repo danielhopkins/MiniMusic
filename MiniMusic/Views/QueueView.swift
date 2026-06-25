@@ -12,6 +12,7 @@ struct QueueView: View {
             Divider()
             queueContent
         }
+        .frame(height: 450)
         .navigationBarBackButtonHidden(true)
         .toolbar(.hidden, for: .automatic)
     }
@@ -115,13 +116,20 @@ private struct QueueRow: View {
             }
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(entry.title)
+                let lines = ClassicalTitle.split(entry.title)
+                Text(lines.work)
                     .font(.body)
                     .lineLimit(1)
-                if let subtitle = entry.subtitle {
-                    Text(subtitle)
+                if let detail = lines.detail {
+                    Text(detail)
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+                if let subtitle = entry.subtitle, !subtitle.isEmpty {
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
                         .lineLimit(1)
                 }
             }

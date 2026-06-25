@@ -59,3 +59,26 @@ targets:
         NSAppleMusicUsageDescription: "MiniMusic needs access to your Apple Music library to play music and show your playlists."
     entitlements:
       path: MiniMusic/MiniMusic.entitlements
+
+  MiniMusicTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - Tests
+      # Compiled directly in so these run hostless (no app launch needed).
+      - MiniMusic/Utilities/ClassicalTitle.swift
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.boulderhopkins.MiniMusicTests
+        SWIFT_VERSION: "6.2"
+        SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
+        GENERATE_INFOPLIST_FILE: true
+
+schemes:
+  MiniMusicTests:
+    build:
+      targets:
+        MiniMusicTests: [test]
+    test:
+      targets:
+        - MiniMusicTests

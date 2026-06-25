@@ -85,6 +85,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         ) { [weak self] _ in
             MainActor.assumeIsolated { self?.openSettings() }
         }
+
+        // Restore the previously saved queue (paused) once MusicKit is ready.
+        Task { @MainActor in
+            await playerVM.restoreQueueIfNeeded()
+        }
+    }
+
+    /// Persist the queue on quit so it survives the next launch.
+    func applicationWillTerminate(_ notification: Notification) {
+        playerVM.persistQueue()
     }
 
     @objc private func statusItemClicked() {

@@ -33,7 +33,10 @@ struct PlayerView: View {
                     }
                 }
         }
-        .frame(width: 320, height: 400)
+        // Width is fixed; height follows the content so there's no dead space
+        // above/below the player. The scrollable Queue/Library destinations set
+        // their own height.
+        .frame(width: 320)
         .onChange(of: appState.isSearchFieldFocused) { _, shouldFocus in
             if shouldFocus {
                 isSearchFocused = true
@@ -42,6 +45,11 @@ struct PlayerView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .menuBarDismissed)) { _ in
             navigationPath = NavigationPath()
+        }
+        .task {
+            // Restore the saved queue if authorization was only just granted
+            // (the launch-time attempt is a no-op until authorized).
+            await playerVM.restoreQueueIfNeeded()
         }
     }
 
@@ -53,6 +61,8 @@ struct PlayerView: View {
             Divider()
             nowPlayingSection
                 .padding(.top, 4)
+            trackInfoRow
+                .padding(.top, 8)
             progressSection
                 .padding(.top, 6)
             Divider().padding(.top, 4)
@@ -107,7 +117,7 @@ struct PlayerView: View {
             if let artwork = playerVM.artwork {
                 Color.clear
                     .frame(maxWidth: .infinity)
-                    .frame(height: 240)
+                    .frame(height: 190)
                     .overlay {
                         ArtworkImage(artwork, width: 320, height: 320)
                     }
@@ -117,28 +127,12 @@ struct PlayerView: View {
                 artworkPlaceholder
             }
 
-            // Gradient scrim + track info + controls overlay
-            VStack(spacing: 6) {
-                // Track info
-                VStack(spacing: 2) {
-                    Text(playerVM.currentTitle.isEmpty ? "Not Playing" : playerVM.currentTitle)
-                        .font(.headline)
-                        .lineLimit(1)
-
-                    if !playerVM.currentArtist.isEmpty || !playerVM.currentAlbumTitle.isEmpty {
-                        Text(subtitleText)
-                            .font(.subheadline)
-                            .foregroundStyle(.white.opacity(0.7))
-                            .lineLimit(1)
-                    }
-                }
-
-                // Playback controls
-                controlsSection
-            }
+            // Gradient scrim + playback controls overlay (revealed on hover).
+            // Track text now lives in the always-visible `trackInfoRow` below.
+            controlsSection
             .padding(.horizontal, 16)
-            .padding(.bottom, 8)
-            .padding(.top, 24)
+            .padding(.bottom, 10)
+            .padding(.top, 36)
             .frame(maxWidth: .infinity)
             .background(
                 LinearGradient(
@@ -162,7 +156,7 @@ struct PlayerView: View {
         Rectangle()
             .fill(.quaternary)
             .frame(maxWidth: .infinity)
-            .frame(height: 240)
+            .frame(height: 190)
             .overlay {
                 Image(systemName: "music.note")
                     .font(.system(size: 48))
@@ -181,6 +175,84 @@ struct PlayerView: View {
         case (true, true):
             return ""
         }
+    }
+
+    // MARK: - Track Info Row (always visible)
+
+    private var trackInfoRow: some View {
+        Group {
+            if playerVM.currentTitle.isEmpty {
+                Text("Not Playing")
+                    .font(.headline)
+                    .foregroundStyle(.secondary)
+            } else if playerVM.isClassical {
+                classicalInfo
+            } else {
+                standardInfo
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 16)
+    }
+
+    private var standardInfo: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(playerVM.currentTitle)
+                .font(.headline)
+                .lineLimit(1)
+
+            if !subtitleText.isEmpty {
+                Text(subtitleText)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+        }
+    }
+
+    /// Classical works get a dedicated layout: the work name on its own line,
+    /// then the catalogue/movement detail, then a composer · performer line so
+    /// the people who matter for a recording are always visible.
+    private var classicalInfo: some View {
+        let lines = classicalTitleLines
+
+        return VStack(alignment: .leading, spacing: 3) {
+            Text(lines.work)
+                .font(.headline)
+                .lineLimit(2)
+
+            if let detail = lines.detail {
+                Text(detail)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+            }
+
+            if !composerPerformerText.isEmpty {
+                Text(composerPerformerText)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+        }
+    }
+
+    /// The two title lines for the classical layout: the work name, and an
+    /// optional catalogue/movement detail.
+    ///
+    /// Apple Music formats classical titles consistently as
+    /// `Work, Catalogue: Movement`, so we split the full track title rather than
+    /// relying on the `workName`/`movementName` fields, which are inconsistently
+    /// populated (and often re-embed the catalogue number, breaking the layout).
+    private var classicalTitleLines: (work: String, detail: String?) {
+        ClassicalTitle.split(playerVM.currentTitle)
+    }
+
+    /// "Composer · Performers", omitting either side when unavailable.
+    private var composerPerformerText: String {
+        [playerVM.currentComposer, playerVM.currentArtist]
+            .filter { !$0.isEmpty }
+            .joined(separator: " · ")
     }
 
     // MARK: - Controls

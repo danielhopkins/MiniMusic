@@ -17,6 +17,7 @@ struct LibraryView: View {
             Divider()
             content
         }
+        .frame(height: 450)
         .navigationBarBackButtonHidden(true)
         .toolbar(.hidden, for: .automatic)
         .task {
