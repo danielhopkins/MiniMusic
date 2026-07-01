@@ -67,6 +67,7 @@ targets:
       - Tests
       # Compiled directly in so these run hostless (no app launch needed).
       - MiniMusic/Utilities/ClassicalTitle.swift
+      - MiniMusic/Utilities/ComposerName.swift
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.boulderhopkins.MiniMusicTests

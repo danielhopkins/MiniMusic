@@ -248,9 +248,13 @@ struct PlayerView: View {
         ClassicalTitle.split(playerVM.currentTitle)
     }
 
-    /// "Composer · Performers", omitting either side when unavailable.
+    /// "Composer · Performers", omitting either side when unavailable. The
+    /// composer's given names are abbreviated to initials to save space.
     private var composerPerformerText: String {
-        [playerVM.currentComposer, playerVM.currentArtist]
+        let composer = playerVM.currentComposer.isEmpty
+            ? ""
+            : ComposerName.abbreviated(playerVM.currentComposer)
+        return [composer, playerVM.currentArtist]
             .filter { !$0.isEmpty }
             .joined(separator: " · ")
     }
