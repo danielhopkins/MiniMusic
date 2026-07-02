@@ -32,6 +32,8 @@ enum SearchStrategy: Equatable {
     case albumTracks(album: String, artist: String)
     /// Resolve an artist, then list their top songs (e.g. "Taylor Swift songs").
     case artistTopSongs(artist: String)
+    /// Resolve an artist, then list their albums (e.g. "albums by Taylor Swift").
+    case artistAlbums(artist: String)
     /// Plain free-text search across the requested categories (the default).
     case text(term: String, categories: [SearchCategory])
 }
@@ -55,9 +57,12 @@ enum SearchPlanner {
         if !facets.album.isEmpty, facets.song.isEmpty {
             return .albumTracks(album: facets.album, artist: facets.artist)
         }
-        // A named artist, wanting songs, with no specific song → their top songs.
-        if !facets.artist.isEmpty, facets.song.isEmpty, facets.categories == [.song] {
-            return .artistTopSongs(artist: facets.artist)
+        // A named artist with no specific song, scoped to one type → resolve the
+        // artist and list that relationship (top songs or albums) rather than a
+        // noisy text match.
+        if !facets.artist.isEmpty, facets.song.isEmpty {
+            if facets.categories == [.song] { return .artistTopSongs(artist: facets.artist) }
+            if facets.categories == [.album] { return .artistAlbums(artist: facets.artist) }
         }
         // Everything else is a normal text search.
         return .text(term: facets.term, categories: facets.categories)

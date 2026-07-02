@@ -9,7 +9,7 @@ struct SearchIntent {
     @Guide(description: "A clean, spelling-corrected search string for the core subject only — genre, artist, album, or song — WITHOUT any mood or vibe adjectives (those go in `descriptor`). Fix misspellings ('tailor swift' → 'Taylor Swift'); drop filler like 'from', 'the', 'by'. E.g. 'exciting classical playlists' → 'classical'; 'tailor swift songs from the red album' → 'Taylor Swift Red'.")
     var term: String
 
-    @Guide(description: "Mood, vibe, energy, or descriptive adjectives the user wants (e.g. 'exciting', 'relaxing', 'upbeat', 'sad'), kept separate from the subject. Empty if the query names no mood.")
+    @Guide(description: "Mood, vibe, or energy adjectives the user wants (e.g. 'exciting', 'relaxing', 'upbeat', 'sad'), kept separate from the subject. Do NOT include popularity words like 'popular', 'top', 'best', 'greatest', or 'hits' — those are not moods. Empty if the query names no mood.")
     var descriptor: String
 
     @Guide(description: "The artist or band name if the user named one, corrected for spelling. Empty if no artist was named.")

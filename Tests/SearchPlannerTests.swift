@@ -42,6 +42,13 @@ struct SearchPlannerTests {
         #expect(SearchPlanner.plan(facets) == .albumTracks(album: "Red", artist: "Taylor Swift"))
     }
 
+    @Test("A named artist wanting albums lists their discography")
+    func artistAlbums() {
+        let facets = SearchFacets(term: "Taylor Swift", artist: "Taylor Swift",
+                                  categories: [.album])
+        #expect(SearchPlanner.plan(facets) == .artistAlbums(artist: "Taylor Swift"))
+    }
+
     @Test("A specific song falls through to a text search, not top songs")
     func specificSongIsText() {
         let facets = SearchFacets(term: "Anti-Hero Taylor Swift", artist: "Taylor Swift",

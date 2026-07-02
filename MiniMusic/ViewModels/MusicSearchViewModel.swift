@@ -141,6 +141,7 @@ import Observation
             // single full list of songs, so disable the per-category cap.
             switch strategy {
             case .albumTracks, .artistTopSongs: activeCategories = [.song]
+            case .artistAlbums: activeCategories = [.album]
             case .text(_, let categories): activeCategories = categories
             }
 
@@ -160,6 +161,8 @@ import Observation
             await performAlbumTrackSearch(album: album, artist: artist)
         case .artistTopSongs(let artist):
             await performArtistTopSongsSearch(artist: artist)
+        case .artistAlbums(let artist):
+            await performArtistAlbumsSearch(artist: artist)
         case .text(let term, let categories):
             await withTaskGroup(of: Void.self) { group in
                 group.addTask { await self.performLibrarySearch(term: term, categories: categories) }
@@ -245,6 +248,32 @@ import Observation
             let detailed = try await matched.with([.topSongs])
             guard !Task.isCancelled else { return }
             songs = detailed.topSongs ?? []
+        } catch is CancellationError {
+            // Ignored — superseded by a newer query.
+        } catch {
+            guard !Task.isCancelled else { return }
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    /// Resolves an artist and lists their albums (discography). Falls back to
+    /// showing the matched artists themselves if albums can't be loaded.
+    private func performArtistAlbumsSearch(artist: String) async {
+        resetCollections()
+        do {
+            var request = MusicCatalogSearchRequest(term: artist, types: [Artist.self])
+            request.limit = 5
+            let response = try await request.response()
+            guard !Task.isCancelled else { return }
+
+            guard let matched = response.artists.first else {
+                artists = response.artists
+                return
+            }
+
+            let detailed = try await matched.with([.albums])
+            guard !Task.isCancelled else { return }
+            albums = detailed.albums ?? []
         } catch is CancellationError {
             // Ignored — superseded by a newer query.
         } catch {

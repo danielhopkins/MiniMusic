@@ -29,6 +29,11 @@ final class SearchIntentParser {
             - categories: the kinds of results asked for (songs, albums, artists, \
               playlists); empty if no type is named.
 
+            Popularity words ("popular", "top", "best", "greatest hits") are NOT \
+            moods. "popular/top/best songs by an artist" means that artist's top \
+            songs: set artist, categories [song], and leave descriptor empty — an \
+            artist's top songs are already ranked by popularity.
+
             Examples: "tailor swift songs from the red album" → term "Taylor Swift \
             Red", artist "Taylor Swift", album "Red", categories [song]. \
             "classical playlists that are exciting" → term "classical", \
