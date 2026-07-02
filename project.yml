@@ -68,6 +68,9 @@ targets:
       # Compiled directly in so these run hostless (no app launch needed).
       - MiniMusic/Utilities/ClassicalTitle.swift
       - MiniMusic/Utilities/ComposerName.swift
+      - MiniMusic/Models/SearchCategory.swift
+      - MiniMusic/Utilities/SearchQueryParser.swift
+      - MiniMusic/Utilities/SearchPlanner.swift
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.boulderhopkins.MiniMusicTests

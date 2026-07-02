@@ -28,7 +28,10 @@ struct SearchView: View {
         .onChange(of: searchVM.searchQuery) { _, _ in
             selectedIndex = nil
         }
-        .onAppear { installKeyMonitor() }
+        .onAppear {
+            installKeyMonitor()
+            searchVM.prewarm()
+        }
         .task { isSearchFocused = true }
         .onDisappear { removeKeyMonitor() }
     }
@@ -47,9 +50,19 @@ struct SearchView: View {
                 .font(.headline)
 
             Spacer()
+
+            if searchVM.usedIntelligence {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.tint)
+                    .help("Results refined by Apple Intelligence")
+                    .transition(.opacity.combined(with: .scale))
+                    .accessibilityLabel("Refined by Apple Intelligence")
+            }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
+        .animation(.easeInOut(duration: 0.2), value: searchVM.usedIntelligence)
     }
 
     // MARK: - Key Handling
@@ -128,9 +141,10 @@ struct SearchView: View {
             Spacer()
         } else if searchVM.searchQuery.isEmpty {
             Spacer()
-            Text("Search for songs, albums, artists, and playlists.")
+            Text("Search for songs, albums, artists, and playlists.\nTry \u{201C}piano playlist\u{201D} or \u{201C}swift artist\u{201D} to filter.")
                 .foregroundStyle(.secondary)
                 .font(.caption)
+                .multilineTextAlignment(.center)
             Spacer()
         } else {
             Spacer()
