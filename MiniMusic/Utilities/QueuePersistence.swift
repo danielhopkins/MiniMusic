@@ -11,6 +11,20 @@ struct QueueSnapshot: Codable {
     var currentIndex: Int
     /// Playback position within the current song, in seconds.
     var playbackTime: TimeInterval
+    /// The container the queue was started from (album/playlist), rehydrated on
+    /// launch so "Playing from …" survives a relaunch. Optional so snapshots
+    /// saved before this field existed still decode.
+    var source: SourceSnapshot?
+}
+
+/// A serializable descriptor of the playback source. Only album/playlist
+/// sources are persisted — they can be rehydrated by ID; stations can't be
+/// reliably reconstructed, so they're dropped on relaunch.
+struct SourceSnapshot: Codable {
+    enum Kind: String, Codable { case album, playlist }
+    var kind: Kind
+    var id: String
+    var isLibrary: Bool
 }
 
 /// UserDefaults-backed store for the queue snapshot.

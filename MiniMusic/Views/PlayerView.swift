@@ -59,6 +59,10 @@ struct PlayerView: View {
         VStack(spacing: 0) {
             searchBar
             Divider()
+            if playerVM.playbackSource != nil {
+                sourceBanner
+                    .padding(.top, 6)
+            }
             nowPlayingSection
                 .padding(.top, 4)
             trackInfoRow
@@ -104,6 +108,52 @@ struct PlayerView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
+    }
+
+    // MARK: - Playing From Banner
+
+    /// Compact "Playing from …" strip shown above the artwork so the current
+    /// album/playlist/station is always visible at a glance. Tapping it opens the
+    /// Queue, where the add-to-library / favorite actions live.
+    @ViewBuilder
+    private var sourceBanner: some View {
+        if let source = playerVM.playbackSource {
+            Button {
+                navigationPath.append(NavigationDestination.queue)
+            } label: {
+                HStack(spacing: 8) {
+                    if let artwork = playerVM.sourceArtwork {
+                        ArtworkImage(artwork, width: 26, height: 26)
+                            .clipShape(.rect(cornerRadius: 4))
+                    } else {
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(.quaternary)
+                            .frame(width: 26, height: 26)
+                    }
+
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text("Playing from \(source.kindLabel)")
+                            .font(.caption2)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(.secondary)
+                            .textCase(.uppercase)
+                        Text(source.title)
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .lineLimit(1)
+                    }
+
+                    Spacer(minLength: 4)
+
+                    Image(systemName: "chevron.right")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, 16)
+        }
     }
 
     // MARK: - Now Playing
@@ -328,41 +378,23 @@ struct PlayerView: View {
     // MARK: - Navigation
 
     private var navigationSection: some View {
-        VStack(spacing: 0) {
-            Button {
-                navigationPath.append(NavigationDestination.queue)
-            } label: {
-                HStack {
-                    Label("Queue", systemImage: "list.bullet")
-                    Spacer()
-                    Text(queueCountText)
-                        .foregroundStyle(.secondary)
-                    Image(systemName: "chevron.right")
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
-                }
-                .contentShape(Rectangle())
-                .padding(.horizontal, 16)
-                .padding(.vertical, 6)
+        Button {
+            navigationPath.append(NavigationDestination.queue)
+        } label: {
+            HStack {
+                Label("Queue", systemImage: "list.bullet")
+                Spacer()
+                Text(queueCountText)
+                    .foregroundStyle(.secondary)
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
             }
-            .buttonStyle(.plain)
-
-            Button {
-                navigationPath.append(NavigationDestination.library)
-            } label: {
-                HStack {
-                    Label("Library", systemImage: "music.note.house")
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
-                }
-                .contentShape(Rectangle())
-                .padding(.horizontal, 16)
-                .padding(.vertical, 6)
-            }
-            .buttonStyle(.plain)
+            .contentShape(Rectangle())
+            .padding(.horizontal, 16)
+            .padding(.vertical, 6)
         }
+        .buttonStyle(.plain)
     }
 
     private var queueCountText: String {

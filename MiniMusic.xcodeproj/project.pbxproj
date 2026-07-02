@@ -13,6 +13,7 @@
 		179B8BB7DD70B8793701E455 /* QueueView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6997D6D408B96C9D091840F4 /* QueueView.swift */; };
 		1F97EEE5108EA74CA8F9F240 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 1E1DB3699C9A02589B2F1027 /* Assets.xcassets */; };
 		24EAAB8768C8BED0A7D39253 /* ComposerName.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CB74F88FBA28FB3655E3B5D /* ComposerName.swift */; };
+		25ADF3411710DAA10DA0D84F /* PlaybackSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100110C253DFADC8F62D8231 /* PlaybackSource.swift */; };
 		3EB7502DE703FE133B679603 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0486A4CC6B3AAC586CA721B1 /* SettingsView.swift */; };
 		44E03BDDA02DC19FD4BB8914 /* SearchCategory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11290FB25C97178D8BFACC57 /* SearchCategory.swift */; };
 		4AB7CE5736BE847C889F9270 /* HotkeyNames.swift in Sources */ = {isa = PBXBuildFile; fileRef = F942F9B2FFFD5EE7382859E0 /* HotkeyNames.swift */; };
@@ -47,6 +48,7 @@
 		0486A4CC6B3AAC586CA721B1 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		08EE9289A82094567CBB61EC /* MiniMusicApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MiniMusicApp.swift; sourceTree = "<group>"; };
 		0D7243D75C3334AEBED82454 /* SearchResultItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchResultItem.swift; sourceTree = "<group>"; };
+		100110C253DFADC8F62D8231 /* PlaybackSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackSource.swift; sourceTree = "<group>"; };
 		11290FB25C97178D8BFACC57 /* SearchCategory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchCategory.swift; sourceTree = "<group>"; };
 		1E1DB3699C9A02589B2F1027 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		20568E25618FE8D8A7A72AA0 /* MiniMusicTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MiniMusicTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -155,6 +157,7 @@
 			isa = PBXGroup;
 			children = (
 				931F29EBBD06132F1363A487 /* AppState.swift */,
+				100110C253DFADC8F62D8231 /* PlaybackSource.swift */,
 				11290FB25C97178D8BFACC57 /* SearchCategory.swift */,
 				87B14E8F5CE5C01B2F757729 /* SearchIntent.swift */,
 				0D7243D75C3334AEBED82454 /* SearchResultItem.swift */,
@@ -303,6 +306,7 @@
 				EDD24C878D7F06EA4323527D /* MiniMusicApp.swift in Sources */,
 				60E79CC824F81456DD0C5558 /* MusicAuthManager.swift in Sources */,
 				6F7187FD19F5520E61BC93CD /* MusicSearchViewModel.swift in Sources */,
+				25ADF3411710DAA10DA0D84F /* PlaybackSource.swift in Sources */,
 				0467C6DD0B5E796296026043 /* PlayerView.swift in Sources */,
 				6131E4DF6238AE8E630A780A /* PlayerViewModel.swift in Sources */,
 				D2720C3CE37086850BCADFFF /* QueuePersistence.swift in Sources */,

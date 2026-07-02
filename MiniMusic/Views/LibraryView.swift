@@ -156,11 +156,11 @@ struct LibraryView: View {
     // MARK: - Playback
 
     private func playPlaylist(_ playlist: Playlist) {
-        playerVM.playPlaylist(playlist)
+        playerVM.playPlaylist(playlist, isLibrary: true)
     }
 
     private func playAlbum(_ album: Album) {
-        playerVM.play(album)
+        playerVM.play(album, isLibrary: true)
     }
 }
 

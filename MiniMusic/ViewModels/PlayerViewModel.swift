@@ -34,6 +34,32 @@ import Observation
             || !currentMovementName.isEmpty
     }
 
+    // MARK: - Playback Source
+
+    /// The album/playlist/station the current queue was started from, or `nil`
+    /// when playing loose songs. Drives the "Playing from …" card and its
+    /// library actions.
+    private(set) var playbackSource: PlaybackSource?
+    /// True once the source is in the library — either because it started there
+    /// or because the user just added it. Gates the "Add to Library" action.
+    private(set) var isSourceInLibrary = false
+    /// True once the user has favorited the source this session.
+    private(set) var isSourceFavorited = false
+    /// User-facing message from the most recent source action, if it failed.
+    private(set) var sourceActionError: String?
+    /// Real catalog artwork resolved for a library playlist that originated from
+    /// Apple Music, since its own library artwork won't render. `nil` until (and
+    /// unless) resolution succeeds.
+    private(set) var resolvedSourceArtwork: Artwork?
+
+    /// The artwork to show for the current source: a resolved catalog cover when
+    /// we have one, otherwise the source's best-available artwork (falling back
+    /// to the now-playing track for library playlists).
+    var sourceArtwork: Artwork? {
+        guard let source = playbackSource else { return nil }
+        return resolvedSourceArtwork ?? source.displayArtwork(nowPlaying: artwork)
+    }
+
     // MARK: - Queue Access
 
     var queueEntries: [ApplicationMusicPlayer.Queue.Entry] {
@@ -54,6 +80,7 @@ import Observation
     private var cancellables = Set<AnyCancellable>()
     @ObservationIgnored private var timeObserverTask: Task<Void, Never>?
     @ObservationIgnored private var metadataFetchTask: Task<Void, Never>?
+    @ObservationIgnored private var sourceArtworkTask: Task<Void, Never>?
     /// ID of the item the displayed metadata belongs to, so a late catalog
     /// fetch can be discarded if the track has already changed.
     @ObservationIgnored private var currentItemID: MusicItemID?
@@ -85,13 +112,33 @@ import Observation
     // MARK: - Playback Controls
 
     func togglePlayPause() {
+        if isPlaying {
+            Task { player.pause() }
+            return
+        }
+        // The queue can end up empty while a source is still remembered (e.g.
+        // playback ran to the end, or the system player was cleared elsewhere).
+        // In that case, restart from the remembered source rather than no-op.
+        if player.queue.entries.isEmpty, let source = playbackSource {
+            replay(source)
+            return
+        }
         Task {
-            if isPlaying {
-                player.pause()
-            } else {
-                try? await player.play()
-                applyPendingResumeIfNeeded()
-            }
+            try? await player.play()
+            applyPendingResumeIfNeeded()
+        }
+    }
+
+    /// Restarts playback from a remembered source, reusing the same entry point
+    /// (and shuffle behavior) the source was originally played with.
+    private func replay(_ source: PlaybackSource) {
+        switch source {
+        case .album(let album, let isLibrary):
+            play(album, isLibrary: isLibrary)
+        case .playlist(let playlist, let isLibrary):
+            playPlaylist(playlist, isLibrary: isLibrary)
+        case .station(let station):
+            play(station)
         }
     }
 
@@ -125,6 +172,7 @@ import Observation
     // MARK: - Queue Management
 
     func play(_ song: Song) {
+        setSource(nil)
         Task {
             player.queue = [song]
             try? await player.play()
@@ -133,20 +181,23 @@ import Observation
 
     func play(_ songs: [Song]) {
         guard !songs.isEmpty else { return }
+        setSource(nil)
         Task {
             player.queue = ApplicationMusicPlayer.Queue(for: songs)
             try? await player.play()
         }
     }
 
-    func play(_ album: Album) {
+    func play(_ album: Album, isLibrary: Bool = false) {
+        setSource(.album(album, isLibrary: isLibrary))
         Task {
             player.queue = [album]
             try? await player.play()
         }
     }
 
-    func playPlaylist(_ playlist: Playlist) {
+    func playPlaylist(_ playlist: Playlist, isLibrary: Bool = false) {
+        setSource(.playlist(playlist, isLibrary: isLibrary))
         Task {
             player.state.shuffleMode = .songs
             player.queue = [playlist]
@@ -156,6 +207,7 @@ import Observation
     }
 
     func play(_ station: Station) {
+        setSource(.station(station))
         Task {
             player.queue = [station]
             try? await player.play()
@@ -163,6 +215,7 @@ import Observation
     }
 
     func playTopSongForArtist(_ artist: Artist) {
+        setSource(nil)
         Task {
             do {
                 let detailedArtist = try await artist.with([.topSongs])
@@ -181,13 +234,163 @@ import Observation
         switch item {
         case .librarySong(let song), .catalogSong(let song):
             play(song)
-        case .libraryAlbum(let album), .catalogAlbum(let album):
-            play(album)
+        case .libraryAlbum(let album):
+            play(album, isLibrary: true)
+        case .catalogAlbum(let album):
+            play(album, isLibrary: false)
         case .libraryArtist(let artist), .catalogArtist(let artist):
             playTopSongForArtist(artist)
-        case .libraryPlaylist(let playlist), .catalogPlaylist(let playlist):
-            playPlaylist(playlist)
+        case .libraryPlaylist(let playlist):
+            playPlaylist(playlist, isLibrary: true)
+        case .catalogPlaylist(let playlist):
+            playPlaylist(playlist, isLibrary: false)
         }
+    }
+
+    // MARK: - Playback Source Actions
+
+    /// Sets the current source and resets the per-source action state. A source
+    /// that already lives in the library starts out marked as such so its
+    /// "Add to Library" action reads as already-added.
+    private func setSource(_ source: PlaybackSource?) {
+        playbackSource = source
+        isSourceInLibrary = source?.isInLibrary ?? false
+        isSourceFavorited = false
+        sourceActionError = nil
+        resolvedSourceArtwork = nil
+        resolveSourceArtworkIfNeeded(source)
+    }
+
+    /// A library playlist added from Apple Music has a catalog counterpart whose
+    /// cover actually renders. Resolve it in the background and swap it in for
+    /// display. Only library playlists need this; albums and catalog playlists
+    /// already carry a usable cover.
+    private func resolveSourceArtworkIfNeeded(_ source: PlaybackSource?) {
+        sourceArtworkTask?.cancel()
+        guard case .playlist(let playlist, true)? = source else { return }
+        sourceArtworkTask = Task { [weak self] in
+            guard let catalogID = Self.catalogID(from: playlist),
+                  let catalog = await Self.fetchPlaylist(id: catalogID, isLibrary: false),
+                  let artwork = catalog.artwork
+            else { return }
+            guard !Task.isCancelled, let self,
+                  case .playlist(let current, true)? = self.playbackSource,
+                  current.id == playlist.id
+            else { return }
+            self.resolvedSourceArtwork = artwork
+        }
+    }
+
+    /// Extracts the Apple Music catalog ID from a library playlist's play
+    /// parameters, present only when the playlist originated from the catalog
+    /// (i.e. was added/favorited rather than user-created). `playParameters` is
+    /// opaque but `Codable`, so round-trip it through JSON to read the field.
+    private nonisolated static func catalogID(from playlist: Playlist) -> String? {
+        guard let params = playlist.playParameters,
+              let data = try? JSONEncoder().encode(params),
+              let decoded = try? JSONDecoder().decode(PlayParametersFields.self, from: data)
+        else { return nil }
+        return decoded.globalID ?? decoded.catalogID
+    }
+
+    nonisolated private struct PlayParametersFields: Decodable {
+        let globalID: String?
+        let catalogID: String?
+
+        enum CodingKeys: String, CodingKey {
+            case globalID = "globalId"
+            case catalogID = "catalogId"
+        }
+    }
+
+    /// Adds the current album/playlist source to the user's library. Only catalog
+    /// sources reach here — library sources have the action disabled.
+    func addSourceToLibrary() async {
+        guard let source = playbackSource else { return }
+        sourceActionError = nil
+        do {
+            try await Self.addToLibrary(source)
+            isSourceInLibrary = true
+        } catch {
+            sourceActionError = "Couldn't add to library."
+        }
+    }
+
+    /// Issues a `POST …/me/library?ids[{type}]={id}`. `MusicLibrary.add` is
+    /// iOS-only, so on macOS we hit the Apple Music API directly; the endpoint
+    /// takes catalog IDs, which is all this action is offered for.
+    private nonisolated static func addToLibrary(_ source: PlaybackSource) async throws {
+        let type: String
+        let id: String
+        switch source {
+        case .album(let album, _):
+            type = "albums"
+            id = album.id.rawValue
+        case .playlist(let playlist, _):
+            type = "playlists"
+            id = playlist.id.rawValue
+        case .station:
+            return
+        }
+
+        var components = URLComponents(string: "https://api.music.apple.com/v1/me/library")
+        components?.queryItems = [URLQueryItem(name: "ids[\(type)]", value: id)]
+        guard let url = components?.url else { throw SourceActionError.invalidRequest }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        _ = try await MusicDataRequest(urlRequest: request).response()
+    }
+
+    /// Favorites (loves) the current source via the Apple Music ratings API,
+    /// which MusicKit doesn't wrap with a typed method.
+    func favoriteSource() async {
+        guard let source = playbackSource else { return }
+        sourceActionError = nil
+        do {
+            try await Self.favorite(source)
+            isSourceFavorited = true
+        } catch {
+            sourceActionError = "Couldn't favorite."
+        }
+    }
+
+    /// Issues a `PUT …/me/ratings/{type}/{id}` with a value of `1` (love).
+    /// Library items use the `library-*` rating types; catalog items the plain
+    /// ones. `MusicDataRequest` attaches the developer and user tokens.
+    private nonisolated static func favorite(_ source: PlaybackSource) async throws {
+        let type: String
+        let id: String
+        switch source {
+        case .album(let album, let isLibrary):
+            type = isLibrary ? "library-albums" : "albums"
+            id = album.id.rawValue
+        case .playlist(let playlist, let isLibrary):
+            type = isLibrary ? "library-playlists" : "playlists"
+            id = playlist.id.rawValue
+        case .station:
+            return
+        }
+
+        guard let encodedID = id.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed),
+              let url = URL(string: "https://api.music.apple.com/v1/me/ratings/\(type)/\(encodedID)")
+        else {
+            throw SourceActionError.invalidRequest
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "PUT"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONSerialization.data(withJSONObject: [
+            "type": "rating",
+            "attributes": ["value": 1],
+        ])
+
+        _ = try await MusicDataRequest(urlRequest: request).response()
+    }
+
+    enum SourceActionError: Error {
+        case invalidRequest
     }
 
     func addToQueue(_ song: Song) {
@@ -358,8 +561,26 @@ import Observation
         // persist the pending position to avoid losing it.
         let time = pendingResumeTime ?? player.playbackTime
         QueuePersistence.save(
-            QueueSnapshot(songIDs: ids, currentIndex: currentIndex, playbackTime: time)
+            QueueSnapshot(
+                songIDs: ids,
+                currentIndex: currentIndex,
+                playbackTime: time,
+                source: sourceSnapshot
+            )
         )
+    }
+
+    /// A serializable descriptor of the current source, or `nil` for loose songs
+    /// and stations (which can't be reliably rehydrated by ID).
+    private var sourceSnapshot: SourceSnapshot? {
+        switch playbackSource {
+        case .album(let album, let isLibrary):
+            return SourceSnapshot(kind: .album, id: album.id.rawValue, isLibrary: isLibrary)
+        case .playlist(let playlist, let isLibrary):
+            return SourceSnapshot(kind: .playlist, id: playlist.id.rawValue, isLibrary: isLibrary)
+        case .station, .none:
+            return nil
+        }
     }
 
     /// Rebuilds the saved queue on launch (paused; the saved position is
@@ -394,6 +615,52 @@ import Observation
         }
         try? await player.prepareToPlay()
         updateCurrentEntry()
+        await restoreSource(snapshot.source)
+    }
+
+    /// Rehydrates the persisted source by ID so "Playing from …" and its library
+    /// actions come back on relaunch. Best-effort: a failed fetch just leaves the
+    /// source unset.
+    private func restoreSource(_ snapshot: SourceSnapshot?) async {
+        guard let snapshot else { return }
+        switch snapshot.kind {
+        case .album:
+            if let album = await Self.fetchAlbum(id: snapshot.id, isLibrary: snapshot.isLibrary) {
+                setSource(.album(album, isLibrary: snapshot.isLibrary))
+            }
+        case .playlist:
+            if let playlist = await Self.fetchPlaylist(id: snapshot.id, isLibrary: snapshot.isLibrary) {
+                setSource(.playlist(playlist, isLibrary: snapshot.isLibrary))
+            }
+        }
+    }
+
+    private nonisolated static func fetchAlbum(id: String, isLibrary: Bool) async -> Album? {
+        do {
+            if isLibrary {
+                var request = MusicLibraryRequest<Album>()
+                request.filter(matching: \.id, equalTo: MusicItemID(id))
+                return try await request.response().items.first
+            }
+            let request = MusicCatalogResourceRequest<Album>(matching: \.id, equalTo: MusicItemID(id))
+            return try await request.response().items.first
+        } catch {
+            return nil
+        }
+    }
+
+    private nonisolated static func fetchPlaylist(id: String, isLibrary: Bool) async -> Playlist? {
+        do {
+            if isLibrary {
+                var request = MusicLibraryRequest<Playlist>()
+                request.filter(matching: \.id, equalTo: MusicItemID(id))
+                return try await request.response().items.first
+            }
+            let request = MusicCatalogResourceRequest<Playlist>(matching: \.id, equalTo: MusicItemID(id))
+            return try await request.response().items.first
+        } catch {
+            return nil
+        }
     }
 
     /// Fetches songs for the given IDs from the catalog and library, returning

@@ -10,6 +10,10 @@ struct QueueView: View {
         VStack(spacing: 0) {
             header
             Divider()
+            if playerVM.playbackSource != nil {
+                sourceCard
+                Divider()
+            }
             queueContent
         }
         .frame(height: 450)
@@ -34,6 +38,83 @@ struct QueueView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
+    }
+
+    // MARK: - Playback Source
+
+    @ViewBuilder
+    private var sourceCard: some View {
+        if let source = playerVM.playbackSource {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 10) {
+                    if let artwork = playerVM.sourceArtwork {
+                        ArtworkImage(artwork, width: 44, height: 44)
+                            .clipShape(.rect(cornerRadius: 5))
+                    } else {
+                        RoundedRectangle(cornerRadius: 5)
+                            .fill(.quaternary)
+                            .frame(width: 44, height: 44)
+                    }
+
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("Playing from \(source.kindLabel)")
+                            .font(.caption2)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(.secondary)
+                            .textCase(.uppercase)
+                        Text(source.title)
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .lineLimit(1)
+                        Text(source.subtitle)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+
+                    Spacer()
+                }
+
+                if source.supportsLibraryActions {
+                    sourceActions
+                }
+
+                if let error = playerVM.sourceActionError {
+                    Text(error)
+                        .font(.caption2)
+                        .foregroundStyle(.red)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+        }
+    }
+
+    private var sourceActions: some View {
+        HStack(spacing: 8) {
+            Button {
+                Task { await playerVM.addSourceToLibrary() }
+            } label: {
+                Label(
+                    playerVM.isSourceInLibrary ? "In Library" : "Add to Library",
+                    systemImage: playerVM.isSourceInLibrary ? "checkmark" : "plus"
+                )
+            }
+            .disabled(playerVM.isSourceInLibrary)
+
+            Button {
+                Task { await playerVM.favoriteSource() }
+            } label: {
+                Label(
+                    playerVM.isSourceFavorited ? "Favorited" : "Favorite",
+                    systemImage: playerVM.isSourceFavorited ? "heart.fill" : "heart"
+                )
+            }
+            .disabled(playerVM.isSourceFavorited)
+        }
+        .buttonStyle(.bordered)
+        .controlSize(.small)
+        .font(.caption)
     }
 
     // MARK: - Queue Content
