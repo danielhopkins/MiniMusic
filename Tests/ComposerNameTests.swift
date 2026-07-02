@@ -52,4 +52,21 @@ struct ComposerNameTests {
         #expect(ComposerName.abbreviated("W. A. Mozart") == "W. A. Mozart")
         #expect(ComposerName.abbreviated("L. van Beethoven") == "L. van Beethoven")
     }
+
+    @Test("Abbreviates each composer in a multi-composer credit", arguments: [
+        ("Percy Grainger & Edvard Grieg", "P. Grainger & E. Grieg"),
+        ("Robert Schumann & Clara Schumann", "R. Schumann & C. Schumann"),
+        ("John Adams / Steve Reich", "J. Adams / S. Reich"),
+        ("Georges Bizet; Percy Aldridge Grainger", "G. Bizet; P. A. Grainger"),
+        ("Traditional & Percy Grainger", "Traditional & P. Grainger"),
+    ])
+    func multipleComposers(input: String, expected: String) {
+        #expect(ComposerName.abbreviated(input) == expected)
+    }
+
+    @Test("Leaves surname-only duos intact")
+    func surnameDuo() {
+        // Neither has a given name to abbreviate.
+        #expect(ComposerName.abbreviated("Gilbert & Sullivan") == "Gilbert & Sullivan")
+    }
 }

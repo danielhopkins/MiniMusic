@@ -15,7 +15,7 @@ enum ComposerName {
         "vaughan williams", "mendelssohn bartholdy",
     ]
 
-    /// Abbreviates a composer's given names to initials while keeping the
+    /// Abbreviates a composer credit's given names to initials while keeping the
     /// surname (and any nobiliary particle) intact, to save horizontal space:
     ///
     ///   "Wolfgang Amadeus Mozart" → "W. A. Mozart"
@@ -23,8 +23,34 @@ enum ComposerName {
     ///   "Jean-Philippe Rameau"    → "J.-P. Rameau"
     ///   "Ralph Vaughan Williams"  → "R. Vaughan Williams"
     ///
-    /// Single-name composers ("Vivaldi") are returned unchanged.
+    /// When the credit lists several composers joined by "&", "/" or ";", each
+    /// is abbreviated independently ("Percy Grainger & Edvard Grieg" →
+    /// "P. Grainger & E. Grieg"). Single-name composers ("Vivaldi") are
+    /// returned unchanged.
     nonisolated static func abbreviated(_ name: String) -> String {
+        // Split on multi-composer separators, abbreviating each name in place
+        // and leaving the separators (and surrounding spacing) untouched.
+        guard let regex = try? NSRegularExpression(pattern: "[^&/;]+") else {
+            return abbreviateOne(name)
+        }
+        let ns = name as NSString
+        let matches = regex.matches(in: name, range: NSRange(location: 0, length: ns.length))
+        guard matches.count > 1 else { return abbreviateOne(name) }
+
+        let result = NSMutableString(string: name)
+        for match in matches.reversed() {
+            let segment = ns.substring(with: match.range)
+            let lead = String(segment.prefix(while: { $0 == " " }))
+            let trail = String(segment.reversed().prefix(while: { $0 == " " }))
+            let core = segment.trimmingCharacters(in: .whitespaces)
+            guard !core.isEmpty else { continue }
+            result.replaceCharacters(in: match.range, with: lead + abbreviateOne(core) + trail)
+        }
+        return result as String
+    }
+
+    /// Abbreviates a single composer name (no multi-composer separators).
+    nonisolated private static func abbreviateOne(_ name: String) -> String {
         let trimmed = name.trimmingCharacters(in: .whitespaces)
         let parts = trimmed.split(separator: " ").map(String.init)
         guard parts.count > 1 else { return trimmed }
