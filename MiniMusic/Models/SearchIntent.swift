@@ -6,7 +6,7 @@ import FoundationModels
 /// just what text to match.
 @Generable
 struct SearchIntent {
-    @Guide(description: "A clean, spelling-corrected search string for the core subject only — genre, artist, album, or song — WITHOUT any mood or vibe adjectives (those go in `descriptor`). Fix misspellings ('tailor swift' → 'Taylor Swift'); drop filler like 'from', 'the', 'by'. E.g. 'exciting classical playlists' → 'classical'; 'tailor swift songs from the red album' → 'Taylor Swift Red'.")
+    @Guide(description: "A clean, spelling-corrected search string for the core subject only — genre, artist, album, or song — WITHOUT any mood or vibe adjectives (those go in `descriptor`). Fix clear misspellings toward the real artist, album, or song the user means ('tailor swift' → 'Taylor Swift'), but ONLY when the corrected word is itself a real musician or recording. Never change a name into an unrelated word that isn't music (a sports team, a place, an everyday noun); when the token the user typed is already a plausible music name, keep it exactly. Drop filler like 'from', 'the', 'by', but always keep a named artist or composer — even alongside a work-form word like 'symphony', 'sonata', 'concerto', or 'nocturne' (e.g. 'mahler symphony' → 'Mahler symphony', not 'symphony'). E.g. 'exciting classical playlists' → 'classical'; 'tailor swift songs from the red album' → 'Taylor Swift Red'.")
     var term: String
 
     @Guide(description: "Mood, vibe, or energy adjectives the user wants (e.g. 'exciting', 'relaxing', 'upbeat', 'sad'), kept separate from the subject. Do NOT include popularity words like 'popular', 'top', 'best', 'greatest', or 'hits' — those are not moods. Empty if the query names no mood.")

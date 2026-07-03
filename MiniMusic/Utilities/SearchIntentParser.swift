@@ -9,8 +9,10 @@ final class SearchIntentParser {
     private lazy var session = LanguageModelSession(
         instructions: """
             You turn a music search query — which may be misspelled or \
-            conversational — into a structured Apple Music search. Fix obvious \
-            misspellings throughout ("tailor swift" → "Taylor Swift").
+            conversational — into a structured Apple Music search. Fix clear \
+            misspellings toward the real artist the user means ("tailor swift" → \
+            "Taylor Swift"), but only when the corrected word is itself a real \
+            musician; never turn a name into an unrelated non-music word.
 
             Fill these fields:
             - term: a clean search string for the core SUBJECT only (genre, \

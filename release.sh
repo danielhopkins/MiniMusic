@@ -25,6 +25,25 @@ KEYCHAIN_PROFILE="MiniMusic"
 
 cd "$SCRIPT_DIR"
 
+# ── 0. Pre-flight: on-device intent test suite ──────────────────────
+# DO NOT ship a release unless the intent test suite has been run and passes.
+# The on-device intent parser prompt (SearchIntent / SearchIntentParser) is easy
+# to regress — a small wording change can make the model mangle artist names
+# (e.g. "brahms" → "braves"). Tools/IntentBench catches this, but it needs live
+# Apple Intelligence and is nondeterministic, so it can't run in CI — it must be
+# run by hand before shipping. Set SKIP_INTENT_CHECK=1 only if you know why.
+if [ "${SKIP_INTENT_CHECK:-0}" != "1" ]; then
+    echo "── Release pre-flight ──────────────────────────────────"
+    echo "Have you run the intent test suite and confirmed it passes?"
+    echo "    ./Tools/IntentBench/bench.sh"
+    echo "(needs Apple Intelligence; can't run in CI — see Tools/IntentBench/README.md)"
+    read -r -p "Intent suite passing? [y/N] " ans
+    if [[ "$ans" != [yY] ]]; then
+        echo "Aborting: run ./Tools/IntentBench/bench.sh first (or SKIP_INTENT_CHECK=1 to override)."
+        exit 1
+    fi
+fi
+
 # ── 1. Bump version (CalVer: YY.MMDD.Patch) ─────────────────────────
 CURRENT_VERSION=$(grep 'MARKETING_VERSION:' "$PROJECT_YML" | sed 's/.*"\(.*\)"/\1/')
 YY=$(date +%y)
