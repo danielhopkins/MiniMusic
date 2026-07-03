@@ -69,6 +69,39 @@ let cases: [BenchCase] = [
     .init(query: "radiohed",                    stems: ["radiohead"],           group: "must-fix"),
 ]
 
+/// What a query should route to. `wantsMusic` = the user asked for an artist's
+/// music, so the search must return songs/albums — NOT be scoped to the "artist"
+/// category (which fetches only performer entities, the "brahms → just the name
+/// card" bug). `wantsArtistList` = the user genuinely wants performers, so the
+/// "artist" category is correct.
+enum RouteWant { case wantsMusic, wantsArtistList }
+
+struct RouteCase { let query: String; let want: RouteWant }
+
+/// Passes when the parsed categories match the intent. The failure we care about
+/// is a music request collapsing to an artist-only search.
+func routePasses(_ facets: SearchFacets, _ want: RouteWant) -> Bool {
+    switch want {
+    case .wantsMusic:      return facets.categories != [.artist]
+    case .wantsArtistList: return facets.categories == [.artist]
+    }
+}
+
+// Routing regressions the name-survival benchmark can't see: a named artist's
+// music request must not collapse to an artist-only search.
+let routeCases: [RouteCase] = [
+    .init(query: "pieces by brahms",     want: .wantsMusic),
+    .init(query: "brahms music",         want: .wantsMusic),
+    .init(query: "works by chopin",      want: .wantsMusic),
+    .init(query: "kendrick lamar songs", want: .wantsMusic),
+    .init(query: "music by radiohead",   want: .wantsMusic),
+    .init(query: "drake songs",          want: .wantsMusic),
+    .init(query: "taylor swift music",   want: .wantsMusic),
+    .init(query: "beyonce tracks",       want: .wantsMusic),
+    // The genuine artist-list case must stay scoped to artists.
+    .init(query: "bands like radiohead", want: .wantsArtistList),
+]
+
 @main
 struct Benchmark {
     static func main() async {
@@ -120,5 +153,30 @@ struct Benchmark {
         }
         let ok = groupOK.values.reduce(0, +), tot = groupTotal.values.reduce(0, +)
         print("  OVERALL: \(ok)/\(tot)  (\(Int(Double(ok) / Double(tot) * 100))%)   in \(secs(started.duration(to: clock.now)))")
+
+        // ── Routing phase ────────────────────────────────────────────────
+        print("\n── routing (categories) ──")
+        var routeOK = 0, routeTot = 0
+        for (i, rc) in routeCases.enumerated() {
+            progress("[route \(i + 1)/\(routeCases.count)] \(rc.query) … ")
+            let rStart = clock.now
+            var pass = 0
+            var seen: [String] = []
+            for _ in 0..<iters {
+                if let intent = await SearchIntentParser().parse(rc.query) {
+                    let cats = intent.facets.categories.map(\.rawValue).sorted().joined(separator: ",")
+                    seen.append(cats.isEmpty ? "∅" : cats)
+                    if routePasses(intent.facets, rc.want) { pass += 1 }
+                }
+            }
+            routeOK += pass; routeTot += iters
+            progress("\(pass)/\(iters) in \(secs(rStart.duration(to: clock.now)))\n")
+            let flag = pass == iters ? "✓ " : "❌"
+            let want = rc.want == .wantsMusic ? "music" : "artist-list"
+            let counts = Dictionary(grouping: seen, by: { $0 }).mapValues(\.count)
+                .sorted { $0.key < $1.key }.map { "\($0.key)×\($0.value)" }.joined(separator: " ")
+            print("\(flag) \(pass)/\(iters)  want=\(want)  \"\(rc.query)\"   categories: \(counts)")
+        }
+        print("  ROUTING: \(routeOK)/\(routeTot)  (\(Int(Double(routeOK) / Double(routeTot) * 100))%)")
     }
 }

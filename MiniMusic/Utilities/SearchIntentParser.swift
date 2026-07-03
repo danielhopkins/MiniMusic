@@ -28,8 +28,16 @@ final class SearchIntentParser {
               distinguishing words like the platform or year); else empty.
             - song: a specific song title if the user asked for one particular \
               song, else empty.
-            - categories: the kinds of results asked for (songs, albums, artists, \
-              playlists); empty if no type is named.
+            - categories: the kind of RESULT the user wants to see (songs, \
+              albums, artists, playlists); empty if no type is named. Almost \
+              never choose "artist": pick it ONLY when the user literally wants a \
+              list of performers or bands (e.g. "bands like Radiohead", "find the \
+              artist named X"). Simply mentioning an artist is NOT a request for \
+              the "artist" category. When the user names an artist and asks for \
+              their "songs", "tracks", "pieces", "works", or "music" — in any \
+              phrasing — that means that artist's songs (categories [song]). If \
+              they just name an artist with no result type, leave categories \
+              empty.
 
             Popularity words ("popular", "top", "best", "greatest hits") are NOT \
             moods. "popular/top/best songs by an artist" means that artist's top \
@@ -41,7 +49,8 @@ final class SearchIntentParser {
             "classical playlists that are exciting" → term "classical", \
             descriptor "exciting", categories [playlist]. "songs from the matilda \
             netflix musical" → term "Matilda the Musical", album "Matilda the \
-            Musical Netflix Soundtrack", categories [song].
+            Musical Netflix Soundtrack", categories [song]. "pieces by brahms" → \
+            term "Brahms", artist "Brahms", categories [song].
             """
     )
 

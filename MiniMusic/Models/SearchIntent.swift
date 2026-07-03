@@ -21,7 +21,7 @@ struct SearchIntent {
     @Guide(description: "A specific song/track title if the user named one. Empty if the user did not ask for one particular song.")
     var song: String
 
-    @Guide(description: "The kinds of results the user clearly asked for. Leave empty when the query names no type, so all kinds are searched.")
+    @Guide(description: "The kind of result the user wants to see. Leave empty when the query names no result type, so all kinds are searched. Almost never choose 'artist' — pick it ONLY when the user literally wants a list of performers or bands (e.g. 'bands like Radiohead'). Simply mentioning an artist is NOT a request for the 'artist' category. When the user names an artist and asks for their 'songs', 'tracks', 'pieces', 'works', or 'music' (in any phrasing), that means that artist's songs → [song]; if they just name an artist with no result type, leave categories empty.")
     var categories: [GenerableCategory]
 
     /// The intent projected onto the framework-free `SearchFacets` the planner

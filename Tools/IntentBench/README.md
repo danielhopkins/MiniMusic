@@ -48,6 +48,12 @@ Groups:
 Target: 100% on composer/popular, high on must-fix. `metalica` occasionally
 slips through uncorrected and is the known soft spot.
 
+After the survival groups, a **routing** phase checks the parsed `categories`.
+A request for an artist's music ("pieces by brahms", "kendrick lamar songs")
+must resolve to songs — not collapse to the `artist` category, which fetches
+only performer entities (the "just the name card, no music" bug). A genuine
+"bands like Radiohead" must stay scoped to `artist`. Target: 100%.
+
 ## `inspect.sh` — per-query inspector
 
 Prints the parsed facets for specific queries plus the downstream search
