@@ -32,6 +32,11 @@ import Observation
     /// the model re-rank pass. Empty for ordinary searches.
     private var activeDescriptor = ""
 
+    /// Log of executed searches and what they returned. Owned here (and exposed
+    /// so it can be injected into the environment) since every search flows
+    /// through this view model.
+    let history = SearchHistoryStore()
+
     var isEmpty: Bool {
         songs.isEmpty && albums.isEmpty && artists.isEmpty && playlists.isEmpty
             && librarySongs.isEmpty && libraryAlbums.isEmpty && libraryArtists.isEmpty
@@ -149,8 +154,32 @@ import Observation
 
             if !Task.isCancelled {
                 isLoading = false
+                recordHistory(query: trimmed)
             }
         }
+    }
+
+    /// Logs the just-completed search and its result summary. Counts come from
+    /// the raw collections (not the capped `allResults`) so history reflects
+    /// everything the search actually returned.
+    private func recordHistory(query: String) {
+        let counts = SearchHistoryEntry.ResultCounts(
+            librarySongs: librarySongs.count,
+            libraryAlbums: libraryAlbums.count,
+            libraryArtists: libraryArtists.count,
+            libraryPlaylists: libraryPlaylists.count,
+            songs: songs.count,
+            albums: albums.count,
+            artists: artists.count,
+            playlists: playlists.count
+        )
+        let top = allResults.prefix(6).map { "\($0.title) — \($0.subtitle)" }
+        history.record(
+            query: query,
+            usedIntelligence: usedIntelligence,
+            counts: counts,
+            topResults: top
+        )
     }
 
     // MARK: - Strategy execution

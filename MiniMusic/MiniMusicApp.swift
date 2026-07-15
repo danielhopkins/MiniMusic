@@ -54,6 +54,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             .environment(authManager)
             .environment(playerVM)
             .environment(searchVM)
+            .environment(searchVM.history)
             .background(.regularMaterial)
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 
