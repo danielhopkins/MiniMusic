@@ -193,6 +193,7 @@ struct SearchView: View {
                 }
                 .padding(.vertical, 4)
             }
+            .frame(maxHeight: Self.maxResultsHeight)
             .onChange(of: selectedIndex) { _, newIndex in
                 if let newIndex {
                     withAnimation {
@@ -201,6 +202,15 @@ struct SearchView: View {
                 }
             }
         }
+    }
+
+    /// Caps the results list so a long result set scrolls inside the panel
+    /// instead of growing the window past the screen. Leaves headroom for the
+    /// header, search bar, and menu bar; falls back to a safe constant when the
+    /// screen height is unavailable.
+    private static var maxResultsHeight: CGFloat {
+        let available = NSScreen.main?.visibleFrame.height ?? 800
+        return max(240, min(520, available - 220))
     }
 
     private func computeSectionStarts(_ results: [SearchResultItem]) -> [Int: String] {
