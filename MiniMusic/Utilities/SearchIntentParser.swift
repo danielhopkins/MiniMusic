@@ -6,8 +6,12 @@ import FoundationModels
 /// returns `nil`, so callers fall back to the deterministic `SearchQueryParser`.
 final class SearchIntentParser {
 
-    private lazy var session = LanguageModelSession(
-        instructions: """
+    /// Each parse builds a *fresh* session from these instructions. A single
+    /// long-lived session would accumulate a transcript across every search and
+    /// eventually overflow the context window, after which every `respond` throws
+    /// and the app silently falls back to the deterministic parser until relaunch.
+    /// Parses are independent, so per-request sessions are both correct and safe.
+    private static let parseInstructions = """
             You turn a music search query — which may be misspelled or \
             conversational — into a structured Apple Music search. Fix clear \
             misspellings toward the real artist the user means ("tailor swift" → \
@@ -52,7 +56,14 @@ final class SearchIntentParser {
             Musical Netflix Soundtrack", categories [song]. "pieces by brahms" → \
             term "Brahms", artist "Brahms", categories [song].
             """
-    )
+
+    /// A session warmed by `prewarm()`, consumed by the next `parse` so the first
+    /// keystroke-driven search isn't cold. Each parse then warms a replacement.
+    private var warmSession: LanguageModelSession?
+
+    private func makeSession() -> LanguageModelSession {
+        LanguageModelSession(instructions: Self.parseInstructions)
+    }
 
     /// Whether the on-device model is ready to use on this device right now.
     var isAvailable: Bool {
@@ -60,20 +71,28 @@ final class SearchIntentParser {
         return false
     }
 
-    /// Warms the model during idle time (e.g. when the search view appears) to
-    /// cut first-response latency. No-op when the model is unavailable.
+    /// Warms a fresh session during idle time (e.g. when the search view appears)
+    /// to cut first-response latency. No-op when the model is unavailable.
     func prewarm() {
-        guard isAvailable else { return }
+        guard isAvailable, warmSession == nil else { return }
+        let session = makeSession()
         session.prewarm()
+        warmSession = session
     }
 
     /// Returns the model's parsed intent, or `nil` if the model is unavailable
     /// or the request fails. Cancellation (e.g. a newer keystroke) surfaces as
-    /// `nil` too, letting the caller stop cleanly.
+    /// `nil` too, letting the caller stop cleanly. Uses a fresh session per call
+    /// so no transcript carries over between searches and overflows the context.
     func parse(_ query: String) async -> SearchIntent? {
         guard isAvailable else { return nil }
+        let session = warmSession ?? makeSession()
+        warmSession = nil
         do {
-            return try await session.respond(to: query, generating: SearchIntent.self).content
+            let intent = try await session.respond(to: query, generating: SearchIntent.self).content
+            // Warm a replacement for the next search while we're idle.
+            prewarm()
+            return intent
         } catch {
             return nil
         }
@@ -81,8 +100,9 @@ final class SearchIntentParser {
 
     // MARK: - Vibe re-ranking
 
-    private lazy var rankingSession = LanguageModelSession(
-        instructions: """
+    /// Fresh per re-rank call for the same reason as `parseInstructions`: a
+    /// shared session would accumulate a transcript and eventually overflow.
+    private static let rankInstructions = """
             You re-rank music search results to match a requested mood or vibe. \
             Given the vibe and a numbered list of results (by name), return the \
             indices to keep — best match first — and drop any whose name clearly \
@@ -90,7 +110,6 @@ final class SearchIntentParser {
             "exciting"). When a name gives no signal either way, keep it rather \
             than guess. Never invent indices outside the list.
             """
-    )
 
     /// Given candidate result names, returns the indices to keep (best first),
     /// filtered and reordered to match `vibe`. Returns `nil` to signal "leave the
@@ -109,7 +128,8 @@ final class SearchIntentParser {
             """
 
         do {
-            let selection = try await rankingSession.respond(
+            let session = LanguageModelSession(instructions: Self.rankInstructions)
+            let selection = try await session.respond(
                 to: prompt, generating: RankedSelection.self
             ).content
 
