@@ -84,8 +84,15 @@ struct PlayerView: View {
         return HStack {
             Image(systemName: "magnifyingglass")
                 .foregroundStyle(.secondary)
-            TextField("Search...", text: $searchVM.searchQuery)
+            TextField("", text: $searchVM.searchQuery)
                 .textFieldStyle(.plain)
+                .accessibilityLabel("Search")
+                .overlay(alignment: .leading) {
+                    if searchVM.searchQuery.isEmpty {
+                        RotatingSearchPrompt()
+                            .allowsHitTesting(false)
+                    }
+                }
                 .focused($isSearchFocused)
                 .onSubmit {
                     if !searchVM.searchQuery.isEmpty {
