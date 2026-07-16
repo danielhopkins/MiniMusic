@@ -24,7 +24,9 @@ func downstream(for facets: SearchFacets, strategy: SearchStrategy) -> String {
         let fetch = categoriesEmpty ? (descriptorEmpty ? 6 : 25) : 25
         let cap = categoriesEmpty ? "3 per category" : "uncapped"
         let rerank = descriptorEmpty ? "no" : "YES (rerankByVibe(\"\(facets.descriptor)\"))"
-        return "route=text  catalogFetch=\(fetch) total  displayCap=\(cap)  vibeRerank=\(rerank)"
+        let boost = CatalogueReference.isReference(facets.song)
+            ? "YES (\"\(facets.song)\")" : "no"
+        return "route=text  catalogFetch=\(fetch) total  displayCap=\(cap)  vibeRerank=\(rerank)  catalogueBoost=\(boost)"
     case .artistTopSongs:
         return "route=artistTopSongs  (artist-scoped, uncapped)"
     case .artistAlbums:

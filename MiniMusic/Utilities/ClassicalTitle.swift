@@ -4,8 +4,9 @@ import Foundation
 enum ClassicalTitle {
     /// Common classical catalogue-number prefixes (Köchel, Opus, Bach-Werke,
     /// Hoboken, etc.). Matched case-sensitively since Apple Music capitalizes
-    /// them, which avoids splitting on ordinary lowercase words.
-    nonisolated private static let cataloguePrefixes = [
+    /// them, which avoids splitting on ordinary lowercase words. Also consumed
+    /// (lowercased) by `CatalogueReference` for query-side matching.
+    nonisolated static let cataloguePrefixes = [
         "Opus", "Op", "KV", "K", "BWV", "BuxWV", "ZWV", "Hob", "HWV", "WAB",
         "RV", "WoO", "Anh", "TWV", "Wq", "Sz", "TrV", "JB", "BB", "FP", "VB",
         "Kk", "ZT", "BV", "D", "S", "B", "P", "T", "H", "G", "L", "M", "R", "Z",

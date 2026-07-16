@@ -32,6 +32,11 @@ import Observation
     /// the model re-rank pass. Empty for ordinary searches.
     private var activeDescriptor = ""
 
+    /// Catalogue/opus reference parsed from the query ("Op. 28 No. 24"), used
+    /// to float exact catalogue matches above Apple's fuzzy lexical ranking.
+    /// Empty when the query names no catalogue reference.
+    private var activeSongReference = ""
+
     /// Log of executed searches and what they returned. Owned here (and exposed
     /// so it can be injected into the environment) since every search flows
     /// through this view model.
@@ -142,6 +147,11 @@ import Observation
             let strategy = SearchPlanner.plan(facets)
             usedIntelligence = refinedByModel
             activeDescriptor = facets.descriptor
+            // A catalogue reference in the song facet ("Op. 28 No. 24") can be
+            // ranked deterministically once results arrive; a real song title
+            // can't, so it stays empty.
+            activeSongReference = CatalogueReference.isReference(facets.song)
+                ? facets.song : ""
             // Resolved-item strategies (album tracks, artist top songs) return a
             // single full list of songs, so disable the per-category cap.
             switch strategy {
@@ -197,11 +207,30 @@ import Observation
                 group.addTask { await self.performLibrarySearch(term: term, categories: categories) }
                 group.addTask { await self.performCatalogSearch(term: term, categories: categories) }
             }
+            // Apple's lexical search is fuzzy about catalogue numbers, so float
+            // titles that actually contain the parsed reference to the top.
+            if !activeSongReference.isEmpty {
+                boostCatalogueMatches(activeSongReference)
+            }
             // The lexical search ignores mood words, so re-rank by the vibe.
             if !activeDescriptor.isEmpty {
                 await rerankByVibe(activeDescriptor, query: term)
             }
         }
+    }
+
+    /// Reorders song and album results so titles containing the catalogue
+    /// reference come first (library and catalog alike), keeping Apple's order
+    /// within each match tier.
+    private func boostCatalogueMatches(_ reference: String) {
+        songs = MusicItemCollection(
+            CatalogueReference.ranked(Array(songs), reference: reference, title: \.title))
+        librarySongs = MusicItemCollection(
+            CatalogueReference.ranked(Array(librarySongs), reference: reference, title: \.title))
+        albums = MusicItemCollection(
+            CatalogueReference.ranked(Array(albums), reference: reference, title: \.title))
+        libraryAlbums = MusicItemCollection(
+            CatalogueReference.ranked(Array(libraryAlbums), reference: reference, title: \.title))
     }
 
     /// Reorders catalog playlists and songs to match a requested vibe the text

@@ -66,6 +66,7 @@ targets:
     sources:
       - Tests
       # Compiled directly in so these run hostless (no app launch needed).
+      - MiniMusic/Utilities/CatalogueReference.swift
       - MiniMusic/Utilities/ClassicalTitle.swift
       - MiniMusic/Utilities/ComposerName.swift
       - MiniMusic/Models/SearchCategory.swift
