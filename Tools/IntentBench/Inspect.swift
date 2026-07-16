@@ -15,7 +15,7 @@ import FoundationModels
 // Mirror of MusicSearchViewModel's fetch-limit + display-cap logic, kept here so
 // the inspector can report the real downstream effect of the facets. Keep in sync
 // with MusicSearchViewModel.performCatalogSearch / allResults if those change.
-func downstream(for facets: SearchFacets, strategy: SearchStrategy) -> String {
+func downstream(for facets: SearchFacets, strategy: SearchStrategy, query: String) -> String {
     let categoriesEmpty = facets.categories.isEmpty
     let descriptorEmpty = facets.descriptor.trimmingCharacters(in: .whitespaces).isEmpty
 
@@ -24,8 +24,9 @@ func downstream(for facets: SearchFacets, strategy: SearchStrategy) -> String {
         let fetch = categoriesEmpty ? (descriptorEmpty ? 6 : 25) : 25
         let cap = categoriesEmpty ? "3 per category" : "uncapped"
         let rerank = descriptorEmpty ? "no" : "YES (rerankByVibe(\"\(facets.descriptor)\"))"
-        let boost = CatalogueReference.isReference(facets.song)
-            ? "YES (\"\(facets.song)\")" : "no"
+        let reference = CatalogueReference.extract(from: facets.song)
+            ?? CatalogueReference.extract(from: query)
+        let boost = reference.map { "YES (\"\($0)\")" } ?? "no"
         return "route=text  catalogFetch=\(fetch) total  displayCap=\(cap)  vibeRerank=\(rerank)  catalogueBoost=\(boost)"
     case .artistTopSongs:
         return "route=artistTopSongs  (artist-scoped, uncapped)"
@@ -43,7 +44,7 @@ func report(_ q: String, _ intent: SearchIntent?) {
         print("  model returned nil (unavailable / rejected / cancelled) → deterministic fallback")
         let f = SearchFacets(deterministicallyParsing: q)
         print("  fallback facets: term=\"\(f.term)\" categories=\(f.categories.map(\.rawValue))")
-        print("  \(downstream(for: f, strategy: SearchPlanner.plan(f)))")
+        print("  \(downstream(for: f, strategy: SearchPlanner.plan(f), query: q))")
         return
     }
     let f = intent.facets
@@ -53,7 +54,7 @@ func report(_ q: String, _ intent: SearchIntent?) {
     print("  album:      \"\(f.album)\"")
     print("  song:       \"\(f.song)\"")
     print("  categories: \(f.categories.map(\.rawValue))")
-    print("  → \(downstream(for: f, strategy: SearchPlanner.plan(f)))")
+    print("  → \(downstream(for: f, strategy: SearchPlanner.plan(f), query: q))")
 }
 
 @main

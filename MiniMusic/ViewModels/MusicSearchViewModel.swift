@@ -37,6 +37,9 @@ import Observation
     /// Empty when the query names no catalogue reference.
     private var activeSongReference = ""
 
+    /// Artist facet of the current search, kept for catalogue work resolution.
+    private var activeArtist = ""
+
     /// Log of executed searches and what they returned. Owned here (and exposed
     /// so it can be injected into the environment) since every search flows
     /// through this view model.
@@ -147,11 +150,13 @@ import Observation
             let strategy = SearchPlanner.plan(facets)
             usedIntelligence = refinedByModel
             activeDescriptor = facets.descriptor
-            // A catalogue reference in the song facet ("Op. 28 No. 24") can be
-            // ranked deterministically once results arrive; a real song title
-            // can't, so it stays empty.
-            activeSongReference = CatalogueReference.isReference(facets.song)
-                ? facets.song : ""
+            // A catalogue reference ("Op. 28 No. 24") can be ranked
+            // deterministically once results arrive. Extract it from the song
+            // facet, falling back to the raw query so ranking doesn't depend on
+            // where the model chose to put (or drop) the reference.
+            activeSongReference = CatalogueReference.extract(from: facets.song)
+                ?? CatalogueReference.extract(from: trimmed) ?? ""
+            activeArtist = facets.artist
             // Resolved-item strategies (album tracks, artist top songs) return a
             // single full list of songs, so disable the per-category cap.
             switch strategy {
@@ -207,15 +212,57 @@ import Observation
                 group.addTask { await self.performLibrarySearch(term: term, categories: categories) }
                 group.addTask { await self.performCatalogSearch(term: term, categories: categories) }
             }
-            // Apple's lexical search is fuzzy about catalogue numbers, so float
-            // titles that actually contain the parsed reference to the top.
+            // Apple's lexical search is fuzzy about catalogue numbers — a term
+            // like "Chopin Op. 28 No. 24" often doesn't return the piece at
+            // all. Resolve the work's album (titled at the work level, e.g.
+            // "24 Préludes, Op. 28") to fetch the exact tracks, then float
+            // titles containing the reference to the top.
             if !activeSongReference.isEmpty {
+                await surfaceCatalogueWork(
+                    activeSongReference, artist: activeArtist, term: term)
                 boostCatalogueMatches(activeSongReference)
             }
             // The lexical search ignores mood words, so re-rank by the vibe.
             if !activeDescriptor.isEmpty {
                 await rerankByVibe(activeDescriptor, query: term)
             }
+        }
+    }
+
+    /// Fetches the exact tracks of a catalogue-referenced work by resolving its
+    /// album — Apple catalogues works as albums titled with the work-level
+    /// number — and prepends the tracks whose titles contain the full reference
+    /// to the song results. Best-effort: any miss leaves the results untouched.
+    private func surfaceCatalogueWork(_ reference: String, artist: String, term: String) async {
+        let work = CatalogueReference.workLevel(reference)
+        let searchTerm = artist.isEmpty ? term : "\(artist) \(work)"
+        do {
+            var request = MusicCatalogSearchRequest(term: searchTerm, types: [Album.self])
+            request.limit = 10
+            let response = try await request.response()
+            guard !Task.isCancelled else { return }
+
+            let candidates = CatalogueReference.ranked(
+                Array(response.albums), reference: work, title: \.title)
+            guard let album = candidates.first,
+                  CatalogueReference.matchTier(title: album.title, reference: work) > 0
+            else { return }
+
+            let detailed = try await album.with([.tracks])
+            guard !Task.isCancelled else { return }
+
+            let exact = (detailed.tracks ?? []).compactMap { track -> Song? in
+                guard case .song(let song) = track,
+                      CatalogueReference.matchTier(title: song.title, reference: reference) == 2
+                else { return nil }
+                return song
+            }
+            guard !exact.isEmpty else { return }
+
+            let ids = Set(exact.map(\.id))
+            songs = MusicItemCollection(exact + songs.filter { !ids.contains($0.id) })
+        } catch {
+            // Best-effort enrichment; the primary results stand on any failure.
         }
     }
 

@@ -32,6 +32,53 @@ enum CatalogueReference {
         }
     }
 
+    /// Extracts the catalogue reference embedded in `text`, if any: the longest
+    /// run of catalogue words and numbers in which some catalogue word is
+    /// immediately followed by a number (the "Op. 28" / "BWV 1041" shape, which
+    /// also keeps key names like "d minor" or counts like "9 symphonies" from
+    /// matching). Works on raw queries ("chopin op 28 no 24" → "op 28 no 24")
+    /// and on song facets that mix a title with a reference
+    /// ("Prelude Op. 28 No. 24" → "op 28 no 24"). Returns nil when `text`
+    /// carries no reference.
+    nonisolated static func extract(from text: String) -> String? {
+        let tokens = normalize(text)
+        var best: [String] = []
+        var run: [String] = []
+        func flush() {
+            if qualifies(run), run.count > best.count { best = run }
+            run = []
+        }
+        for token in tokens {
+            if isNumber(token) || isRoman(token) || catalogueWords.contains(token) {
+                run.append(token)
+            } else {
+                flush()
+            }
+        }
+        flush()
+        return best.isEmpty ? nil : best.joined(separator: " ")
+    }
+
+    /// The work-level portion of a reference: strips a trailing movement/number
+    /// clause ("op 28 no 24" → "op 28") so album titles — which Apple Music
+    /// catalogues at the work level ("24 Préludes, Op. 28") — can be matched.
+    /// References without a trailing "no" clause are returned unchanged.
+    nonisolated static func workLevel(_ reference: String) -> String {
+        var tokens = normalize(reference)
+        if tokens.count >= 4, tokens[tokens.count - 2] == "no", isNumber(tokens[tokens.count - 1]) {
+            tokens.removeLast(2)
+        }
+        return tokens.joined(separator: " ")
+    }
+
+    /// True when some catalogue word in the run is immediately followed by a
+    /// number or roman numeral — the syntactic core of a catalogue reference.
+    nonisolated private static func qualifies(_ run: [String]) -> Bool {
+        zip(run, run.dropFirst()).contains { word, next in
+            catalogueWords.contains(word) && (isNumber(next) || isRoman(next))
+        }
+    }
+
     /// How well `title` matches `reference`: 2 when the reference's tokens
     /// appear contiguously in the title ("…, Op. 28: No. 24 in D Minor"),
     /// 1 when all of the reference's numbers appear somewhere in the title

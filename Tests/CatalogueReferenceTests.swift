@@ -19,6 +19,37 @@ struct CatalogueReferenceTests {
         #expect(!CatalogueReference.isReference(text))
     }
 
+    @Test("Extracts an embedded reference", arguments: [
+        ("chopin op 28 no 24", "op 28 no 24"),
+        ("Prelude Op. 28 No. 24", "op 28 no 24"),
+        ("bach bwv 1041", "bwv 1041"),
+        ("schubert d 969", "d 969"),
+        ("mozart k 466 piano concerto", "k 466"),
+        ("haydn hob xvi 52", "hob xvi 52"),
+    ])
+    func extraction(text: String, expected: String) {
+        #expect(CatalogueReference.extract(from: text) == expected)
+    }
+
+    @Test("Extracts nothing from titles, keys, and counts", arguments: [
+        "", "Bohemian Rhapsody", "prelude in d minor", "symphony 9 d minor",
+        "99 luftballons", "top 10 chopin", "chopin nocturne",
+    ])
+    func noExtraction(text: String) {
+        #expect(CatalogueReference.extract(from: text) == nil)
+    }
+
+    @Test("Work-level reference strips a trailing movement clause", arguments: [
+        ("op 28 no 24", "op 28"),
+        ("Op. 27 No. 2", "op 27"),
+        ("bwv 1041", "bwv 1041"),
+        ("op 111", "op 111"),
+        ("hob xvi 52", "hob xvi 52"),
+    ])
+    func workLevel(reference: String, expected: String) {
+        #expect(CatalogueReference.workLevel(reference) == expected)
+    }
+
     @Test("Exact contiguous match outranks number-only match outranks miss")
     func tiers() {
         let ref = "Op. 28 No. 24"
