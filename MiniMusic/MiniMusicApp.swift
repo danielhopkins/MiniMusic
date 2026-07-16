@@ -41,6 +41,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var settingsWindow: NSWindow?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        #if DEBUG
+        // Debug probe: run one search, print it, exit. No UI.
+        if let query = CatalogueProbe.requestedQuery {
+            Task { await CatalogueProbe.run(query: query, viewModel: searchVM) }
+            return
+        }
+        #endif
+
         migrateConflictingShortcut()
 
         let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)

@@ -16,6 +16,7 @@
 		1F97EEE5108EA74CA8F9F240 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 1E1DB3699C9A02589B2F1027 /* Assets.xcassets */; };
 		24EAAB8768C8BED0A7D39253 /* ComposerName.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CB74F88FBA28FB3655E3B5D /* ComposerName.swift */; };
 		25ADF3411710DAA10DA0D84F /* PlaybackSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100110C253DFADC8F62D8231 /* PlaybackSource.swift */; };
+		398E7DF42DC246A37E79202D /* CatalogueProbe.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7FA6C9D7664BD8A9C51D89F /* CatalogueProbe.swift */; };
 		3EB7502DE703FE133B679603 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0486A4CC6B3AAC586CA721B1 /* SettingsView.swift */; };
 		44E03BDDA02DC19FD4BB8914 /* SearchCategory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11290FB25C97178D8BFACC57 /* SearchCategory.swift */; };
 		4AB7CE5736BE847C889F9270 /* HotkeyNames.swift in Sources */ = {isa = PBXBuildFile; fileRef = F942F9B2FFFD5EE7382859E0 /* HotkeyNames.swift */; };
@@ -81,6 +82,7 @@
 		C224F8475F08BF0257F7EFBA /* PlayerViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerViewModel.swift; sourceTree = "<group>"; };
 		C6620748B52AA65B4FA28262 /* CatalogueReference.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CatalogueReference.swift; sourceTree = "<group>"; };
 		CE7E62676337AC21051C7E09 /* ComposerNameTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComposerNameTests.swift; sourceTree = "<group>"; };
+		D7FA6C9D7664BD8A9C51D89F /* CatalogueProbe.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CatalogueProbe.swift; sourceTree = "<group>"; };
 		DCE90B072DE13C8223F61CB9 /* SoftwareUpdater.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoftwareUpdater.swift; sourceTree = "<group>"; };
 		E7C7AE7D300A808023D0472F /* SearchHistory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchHistory.swift; sourceTree = "<group>"; };
 		F942F9B2FFFD5EE7382859E0 /* HotkeyNames.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeyNames.swift; sourceTree = "<group>"; };
@@ -117,6 +119,7 @@
 		5CCD362A69F38FB42A0219BC /* Utilities */ = {
 			isa = PBXGroup;
 			children = (
+				D7FA6C9D7664BD8A9C51D89F /* CatalogueProbe.swift */,
 				C6620748B52AA65B4FA28262 /* CatalogueReference.swift */,
 				31E88652044A8B244DFBA227 /* ClassicalTitle.swift */,
 				9CB74F88FBA28FB3655E3B5D /* ComposerName.swift */,
@@ -314,6 +317,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				6B4DE8F856015ADC96740C72 /* AppState.swift in Sources */,
+				398E7DF42DC246A37E79202D /* CatalogueProbe.swift in Sources */,
 				6126FC6740BC593C08DA5600 /* CatalogueReference.swift in Sources */,
 				FDD4316CE63C4E3475B7A5C9 /* ClassicalTitle.swift in Sources */,
 				C6F7C43CBE5DBC2C42563623 /* ComposerName.swift in Sources */,
