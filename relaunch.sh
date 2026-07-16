@@ -2,11 +2,26 @@
 set -e
 
 APP_NAME="MiniMusic"
-APP_PATH="$(find ~/Library/Developer/Xcode/DerivedData/${APP_NAME}-*/Build/Products/Debug/${APP_NAME}.app -maxdepth 0 2>/dev/null | head -1)"
+
+# Regenerating the project mints a fresh DerivedData directory without retiring
+# the old one, so several can match the glob at once. Pick by the executable's
+# build time — the oldest is a stale build that predates today's source.
+CANDIDATES="$(
+    for app in ~/Library/Developer/Xcode/DerivedData/${APP_NAME}-*/Build/Products/Debug/${APP_NAME}.app; do
+        exe="$app/Contents/MacOS/${APP_NAME}"
+        [ -x "$exe" ] && printf '%s\t%s\n' "$(stat -f %m "$exe")" "$app"
+    done | sort -rn
+)"
+APP_PATH="$(echo "$CANDIDATES" | head -1 | cut -f2-)"
 
 if [ -z "$APP_PATH" ]; then
     echo "ERROR: No built ${APP_NAME}.app found in DerivedData"
     exit 1
+fi
+
+if [ "$(echo "$CANDIDATES" | wc -l)" -gt 1 ]; then
+    echo "NOTE: multiple DerivedData builds found; using the newest:"
+    echo "$CANDIDATES" | cut -f2- | sed 's/^/  /'
 fi
 
 # Kill all running instances
