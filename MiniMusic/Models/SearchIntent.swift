@@ -18,7 +18,7 @@ struct SearchIntent {
     @Guide(description: "The album name if the user named a specific album — OR the soundtrack/cast album of a named movie, TV show, or musical (e.g. 'songs from the Matilda Netflix musical' → 'Matilda the Musical Netflix Soundtrack'). Keep distinguishing words like the platform, film, or year so the right version is found. Empty if no album or production was named.")
     var album: String
 
-    @Guide(description: "A specific song/track title if the user named one. Empty if the user did not ask for one particular song.")
+    @Guide(description: "A specific song/track title if the user named one. A classical catalogue or opus reference ('op 28 no 24', 'bwv 1041', 'k 466') names one specific piece — put the reference here formatted with periods ('Op. 28 No. 24', 'BWV 1041', 'K. 466'), keeping the composer in `artist`, NOT here. Empty if the user did not ask for one particular song or piece.")
     var song: String
 
     @Guide(description: "The kind of result the user wants to see. Leave empty when the query names no result type, so all kinds are searched. Almost never choose 'artist' — pick it ONLY when the user literally wants a list of performers or bands (e.g. 'bands like Radiohead'). Simply mentioning an artist is NOT a request for the 'artist' category. When the user names an artist and asks for their 'songs', 'tracks', 'pieces', 'works', or 'music' (in any phrasing), that means that artist's songs → [song]; if they just name an artist with no result type, leave categories empty.")

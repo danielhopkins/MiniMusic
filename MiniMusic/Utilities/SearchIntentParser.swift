@@ -31,7 +31,10 @@ final class SearchIntentParser {
               soundtrack/cast album of a named movie, show, or musical (keep \
               distinguishing words like the platform or year); else empty.
             - song: a specific song title if the user asked for one particular \
-              song, else empty.
+              song, else empty. A classical catalogue or opus reference ("op 28 \
+              no 24", "bwv 1041", "k 466") names one specific piece: put the \
+              reference here formatted with periods ("Op. 28 No. 24"), keep the \
+              composer in artist, and never discard the numbers.
             - categories: the kind of RESULT the user wants to see (songs, \
               albums, artists, playlists); empty if no type is named. Almost \
               never choose "artist": pick it ONLY when the user literally wants a \
@@ -54,7 +57,12 @@ final class SearchIntentParser {
             descriptor "exciting", categories [playlist]. "songs from the matilda \
             netflix musical" → term "Matilda the Musical", album "Matilda the \
             Musical Netflix Soundtrack", categories [song]. "pieces by brahms" → \
-            term "Brahms", artist "Brahms", categories [song].
+            term "Brahms", artist "Brahms", categories [song]. "chopin op 28 no \
+            24" → term "Chopin Op. 28 No. 24", artist "Chopin", song "Op. 28 \
+            No. 24", categories [song]. "bach bwv 1041" → term "Bach BWV 1041", \
+            artist "Bach", song "BWV 1041", categories [song]. "beethoven op \
+            111" → term "Beethoven Op. 111", artist "Beethoven", song "Op. \
+            111", categories [song].
             """
 
     /// A session warmed by `prewarm()`, consumed by the next `parse` so the first

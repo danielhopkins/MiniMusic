@@ -73,17 +73,32 @@ let cases: [BenchCase] = [
 /// music, so the search must return songs/albums — NOT be scoped to the "artist"
 /// category (which fetches only performer entities, the "brahms → just the name
 /// card" bug). `wantsArtistList` = the user genuinely wants performers, so the
-/// "artist" category is correct.
-enum RouteWant { case wantsMusic, wantsArtistList }
+/// "artist" category is correct. `wantsPiece` = a catalogue/opus reference names
+/// one specific piece, so the plan must stay a text search — NOT collapse to
+/// artist top-songs, which discards the reference entirely (the "chopin op 28
+/// no 24 → Chopin's greatest hits" bug).
+enum RouteWant { case wantsMusic, wantsArtistList, wantsPiece }
 
-struct RouteCase { let query: String; let want: RouteWant }
+struct RouteCase {
+    let query: String
+    let want: RouteWant
+    /// Fragments that must all survive somewhere in the parsed facets (checked
+    /// folded); catches the model keeping the route but dropping the numbers.
+    var mustKeep: [String] = []
+}
 
-/// Passes when the parsed categories match the intent. The failure we care about
-/// is a music request collapsing to an artist-only search.
-func routePasses(_ facets: SearchFacets, _ want: RouteWant) -> Bool {
-    switch want {
+/// Passes when the parsed facets match the intent. The failures we care about
+/// are a music request collapsing to an artist-only search, and a specific-piece
+/// request collapsing to a top-songs plan.
+func routePasses(_ facets: SearchFacets, _ rc: RouteCase) -> Bool {
+    let haystack = fold("\(facets.term) \(facets.artist) \(facets.album) \(facets.song)")
+    guard rc.mustKeep.allSatisfy({ haystack.contains(fold($0)) }) else { return false }
+    switch rc.want {
     case .wantsMusic:      return facets.categories != [.artist]
     case .wantsArtistList: return facets.categories == [.artist]
+    case .wantsPiece:
+        if case .text = SearchPlanner.plan(facets) { return true }
+        return false
     }
 }
 
@@ -100,6 +115,12 @@ let routeCases: [RouteCase] = [
     .init(query: "beyonce tracks",       want: .wantsMusic),
     // The genuine artist-list case must stay scoped to artists.
     .init(query: "bands like radiohead", want: .wantsArtistList),
+    // Catalogue/opus references name one specific piece: the plan must stay a
+    // text search with the numbers intact, not collapse to artist top-songs.
+    .init(query: "chopin op 28 no 24", want: .wantsPiece, mustKeep: ["chopin", "28", "24"]),
+    .init(query: "beethoven op 111",   want: .wantsPiece, mustKeep: ["beethoven", "111"]),
+    .init(query: "bach bwv 1041",      want: .wantsPiece, mustKeep: ["bach", "1041"]),
+    .init(query: "mozart k 466",       want: .wantsPiece, mustKeep: ["mozart", "466"]),
 ]
 
 @main
@@ -166,13 +187,17 @@ struct Benchmark {
                 if let intent = await SearchIntentParser().parse(rc.query) {
                     let cats = intent.facets.categories.map(\.rawValue).sorted().joined(separator: ",")
                     seen.append(cats.isEmpty ? "∅" : cats)
-                    if routePasses(intent.facets, rc.want) { pass += 1 }
+                    if routePasses(intent.facets, rc) { pass += 1 }
                 }
             }
             routeOK += pass; routeTot += iters
             progress("\(pass)/\(iters) in \(secs(rStart.duration(to: clock.now)))\n")
             let flag = pass == iters ? "✓ " : "❌"
-            let want = rc.want == .wantsMusic ? "music" : "artist-list"
+            let want = switch rc.want {
+            case .wantsMusic: "music"
+            case .wantsArtistList: "artist-list"
+            case .wantsPiece: "piece"
+            }
             let counts = Dictionary(grouping: seen, by: { $0 }).mapValues(\.count)
                 .sorted { $0.key < $1.key }.map { "\($0.key)×\($0.value)" }.joined(separator: " ")
             print("\(flag) \(pass)/\(iters)  want=\(want)  \"\(rc.query)\"   categories: \(counts)")
