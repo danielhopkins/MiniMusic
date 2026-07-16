@@ -77,6 +77,37 @@ struct SearchPlannerTests {
         #expect(SearchPlanner.plan(facets) == .text(term: "Taylor Swift", categories: []))
     }
 
+    @Test("A catalogue reference in the term routes to text even if the song facet is dropped")
+    func catalogueReferenceInTermIsText() {
+        // The model intermittently returns "bach bwv 1041" with an empty `song`
+        // facet while keeping the reference in `term`. Without reading `term`,
+        // this routes to the artist's top songs and BWV 1041 never surfaces.
+        let facets = SearchFacets(term: "Bach BWV 1041", artist: "Bach", categories: [.song])
+        #expect(SearchPlanner.plan(facets) == .text(term: "Bach BWV 1041", categories: [.song]))
+    }
+
+    @Test("A catalogue reference beats an artist's discography scope")
+    func catalogueReferenceBeatsArtistAlbums() {
+        let facets = SearchFacets(term: "Chopin Op. 28", artist: "Chopin", categories: [.album])
+        #expect(SearchPlanner.plan(facets) == .text(term: "Chopin Op. 28", categories: [.album]))
+    }
+
+    @Test("A named work number keeps an artist query out of top songs")
+    func workNumberIsText() {
+        let facets = SearchFacets(term: "Beethoven Symphony No. 5", artist: "Beethoven",
+                                  categories: [.song])
+        #expect(SearchPlanner.plan(facets)
+            == .text(term: "Beethoven Symphony No. 5", categories: [.song]))
+    }
+
+    @Test("A year or number in the term doesn't fake a catalogue reference")
+    func plainNumberIsNotAReference() {
+        // "1989" is an album, not an opus number — the album route must survive.
+        let facets = SearchFacets(term: "Taylor Swift 1989", artist: "Taylor Swift",
+                                  album: "1989", categories: [.song])
+        #expect(SearchPlanner.plan(facets) == .albumTracks(album: "1989", artist: "Taylor Swift"))
+    }
+
     @Test("A plain query with a category filter is a text search")
     func plainCategoryFilter() {
         let facets = SearchFacets(term: "piano", categories: [.playlist])

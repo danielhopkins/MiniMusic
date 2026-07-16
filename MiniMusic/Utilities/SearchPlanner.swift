@@ -53,18 +53,32 @@ extension SearchFacets {
 /// the routing decisions can be unit-tested without MusicKit or the model.
 enum SearchPlanner {
     static func plan(_ facets: SearchFacets) -> SearchStrategy {
-        // A named album with no specific song → list that album's tracks.
-        if !facets.album.isEmpty, facets.song.isEmpty {
+        // A named album with no specific piece → list that album's tracks.
+        if !facets.album.isEmpty, !facets.namesPiece {
             return .albumTracks(album: facets.album, artist: facets.artist)
         }
-        // A named artist with no specific song, scoped to one type → resolve the
+        // A named artist with no specific piece, scoped to one type → resolve the
         // artist and list that relationship (top songs or albums) rather than a
         // noisy text match.
-        if !facets.artist.isEmpty, facets.song.isEmpty {
+        if !facets.artist.isEmpty, !facets.namesPiece {
             if facets.categories == [.song] { return .artistTopSongs(artist: facets.artist) }
             if facets.categories == [.album] { return .artistAlbums(artist: facets.artist) }
         }
         // Everything else is a normal text search.
         return .text(term: facets.term, categories: facets.categories)
+    }
+}
+
+extension SearchFacets {
+    /// True when the query asks for one particular piece, so the artist/album
+    /// shortcuts (top songs, discography, track listings) would bury it.
+    ///
+    /// The `song` facet is the model's own signal, but it drops a catalogue
+    /// reference there intermittently while still keeping it in `term` — and
+    /// "bach bwv 1041" then routed to the artist's top songs, answering a
+    /// question the user didn't ask. So `term` is checked for a reference too,
+    /// making the routing independent of where the model puts it.
+    var namesPiece: Bool {
+        !song.isEmpty || CatalogueReference.extract(from: term) != nil
     }
 }

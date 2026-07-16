@@ -20,6 +20,8 @@ mkdir -p "$HERE/.build"
 swiftc -O \
   "$APP/Models/SearchCategory.swift" \
   "$APP/Models/SearchIntent.swift" \
+  "$APP/Utilities/CatalogueReference.swift" \
+  "$APP/Utilities/ClassicalTitle.swift" \
   "$APP/Utilities/SearchQueryParser.swift" \
   "$APP/Utilities/SearchPlanner.swift" \
   "$APP/Utilities/SearchIntentParser.swift" \
