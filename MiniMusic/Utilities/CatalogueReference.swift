@@ -71,6 +71,62 @@ enum CatalogueReference {
         return tokens.joined(separator: " ")
     }
 
+    /// True when `title` — a track from the album of `reference`'s work — is the
+    /// movement `reference` names.
+    ///
+    /// Tracks can't be matched on the whole reference, because the album carries
+    /// the opus and the track often doesn't repeat it. Apple also writes the
+    /// movement two ways: "Op. 28: No. 24 in D Minor", and, on the recording that
+    /// actually holds the Op. 28 set, a bare ordinal — "24 Préludes, Op. 28, 24.
+    /// in D Minor". Only the movement number is reliably present, so that's what
+    /// this compares. A reference that names no movement ("BWV 1041") falls back
+    /// to a full match.
+    nonisolated static func isMovement(title: String, of reference: String) -> Bool {
+        guard let wanted = movementNumber(of: reference) else {
+            return matchTier(title: title, reference: reference) == 2
+        }
+        return movementNumber(inTitle: title, work: workLevel(reference)) == wanted
+    }
+
+    /// The movement number a reference names ("op 28 no 24" → "24"), or nil when
+    /// it names only a work ("bwv 1041"). The mirror of `workLevel`.
+    nonisolated static func movementNumber(of reference: String) -> String? {
+        let tokens = normalize(reference)
+        guard tokens.count >= 4, tokens[tokens.count - 2] == "no",
+              isNumber(tokens[tokens.count - 1])
+        else { return nil }
+        return tokens[tokens.count - 1]
+    }
+
+    /// The movement `title` names within `work`: the number right after the work's
+    /// catalogue tokens, whether or not a "No." introduces it. Falls back to a
+    /// "No. N" anywhere for movement-first titles ("Prélude No. 24 …, Op. 28").
+    nonisolated static func movementNumber(inTitle title: String, work: String) -> String? {
+        let hay = normalize(title)
+        let workTokens = normalize(work)
+
+        if !workTokens.isEmpty, let end = indexAfter(workTokens, in: hay) {
+            var index = end
+            if index < hay.count, hay[index] == "no" { index += 1 }
+            if index < hay.count, isNumber(hay[index]) { return hay[index] }
+        }
+        // "Prélude No. 24 in D Minor, Op. 28" — the movement precedes the opus.
+        for (word, next) in zip(hay, hay.dropFirst()) where word == "no" && isNumber(next) {
+            return next
+        }
+        return nil
+    }
+
+    /// The index just past a contiguous run of `needle` in `haystack`, or nil.
+    nonisolated private static func indexAfter(_ needle: [String], in haystack: [String]) -> Int? {
+        guard !needle.isEmpty, needle.count <= haystack.count else { return nil }
+        for start in 0...(haystack.count - needle.count)
+        where Array(haystack[start..<(start + needle.count)]) == needle {
+            return start + needle.count
+        }
+        return nil
+    }
+
     /// True when some catalogue word in the run is immediately followed by a
     /// number or roman numeral — the syntactic core of a catalogue reference.
     nonisolated private static func qualifies(_ run: [String]) -> Bool {
@@ -79,18 +135,54 @@ enum CatalogueReference {
         }
     }
 
-    /// How well `title` matches `reference`: 2 when the reference's tokens
-    /// appear contiguously in the title ("…, Op. 28: No. 24 in D Minor"),
-    /// 1 when all of the reference's numbers appear somewhere in the title
-    /// (the "24 Préludes, Op. 28" album), 0 otherwise.
+    /// How well `title` matches `reference`, comparing catalogue *pairs* — a
+    /// catalogue word bound to its number, like "op 28" and "no 24":
+    ///
+    /// - 2: the title carries every pair the reference names, so it *is* the
+    ///   piece ("…, Op. 28: No. 24 in D Minor", "Prélude No. 24 in D Minor,
+    ///   Op. 28").
+    /// - 1: the title carries the work-level pair but not the movement, so it's
+    ///   a sibling in the same opus ("…, Op. 28: No. 6") or the set's album
+    ///   ("24 Préludes, Op. 28").
+    /// - 0: unrelated ("Nocturne Op. 9 No. 2").
+    ///
+    /// Pairing is what keeps the tiers honest. Matching loose numbers would let
+    /// the *count* in "24 Préludes, Op. 28" satisfy the "24" of "No. 24", tying
+    /// every prelude in the set with the one actually asked for; requiring the
+    /// number to sit with its catalogue word ("no 24") separates them. Pairs are
+    /// also order-free, so the movement-first titles Apple Music mixes in
+    /// ("Prélude No. 24 in D Minor, Op. 28") still reach tier 2.
     nonisolated static func matchTier(title: String, reference: String) -> Int {
-        let ref = normalize(reference)
+        let ref = pairs(in: normalize(reference))
         guard !ref.isEmpty else { return 0 }
-        let hay = normalize(title)
-        if containsContiguous(hay, ref) { return 2 }
-        let numbers = ref.filter(isNumber)
-        if !numbers.isEmpty, numbers.allSatisfy(hay.contains) { return 1 }
+        let hay = pairs(in: normalize(title))
+        if ref.isSubset(of: hay) { return 2 }
+        let work = pairs(in: normalize(workLevel(reference)))
+        if !work.isEmpty, work.isSubset(of: hay) { return 1 }
         return 0
+    }
+
+    /// The catalogue pairs in `tokens`: each catalogue word joined to the number
+    /// that immediately follows it ("op 28", "no 24"). A roman numeral carries a
+    /// trailing work number with it, so Haydn's "Hob. XVI 52" stays one pair and
+    /// can't match "Hob. XVI 35".
+    ///
+    /// Requiring the number to *follow* the word is what keeps key names out:
+    /// "D" is Schubert's catalogue, but "in D Minor" is followed by a word, so
+    /// it yields no pair.
+    nonisolated private static func pairs(in tokens: [String]) -> Set<String> {
+        var found: Set<String> = []
+        for (index, token) in tokens.enumerated() where catalogueWords.contains(token) {
+            guard index + 1 < tokens.count else { continue }
+            let value = tokens[index + 1]
+            guard isNumber(value) || isRoman(value) else { continue }
+            var pair = "\(token) \(value)"
+            if isRoman(value), index + 2 < tokens.count, isNumber(tokens[index + 2]) {
+                pair += " \(tokens[index + 2])"
+            }
+            found.insert(pair)
+        }
+        return found
     }
 
     /// Reorders `items` so stronger matches for `reference` come first, keeping
@@ -121,12 +213,4 @@ enum CatalogueReference {
         !token.isEmpty && token.allSatisfy { "ivxlc".contains($0) }
     }
 
-    nonisolated private static func containsContiguous(_ haystack: [String], _ needle: [String]) -> Bool {
-        guard needle.count <= haystack.count else { return false }
-        for start in 0...(haystack.count - needle.count)
-        where Array(haystack[start..<(start + needle.count)]) == needle {
-            return true
-        }
-        return false
-    }
 }

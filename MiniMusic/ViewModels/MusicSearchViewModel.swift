@@ -251,9 +251,12 @@ import Observation
             let detailed = try await album.with([.tracks])
             guard !Task.isCancelled else { return }
 
+            // The album is the work, so its tracks only have to supply the
+            // movement — they routinely don't repeat the opus, and Apple writes
+            // the number as a bare ordinal as often as "No. 24".
             let exact = (detailed.tracks ?? []).compactMap { track -> Song? in
                 guard case .song(let song) = track,
-                      CatalogueReference.matchTier(title: song.title, reference: reference) == 2
+                      CatalogueReference.isMovement(title: song.title, of: reference)
                 else { return nil }
                 return song
             }

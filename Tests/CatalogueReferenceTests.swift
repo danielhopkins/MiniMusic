@@ -50,7 +50,7 @@ struct CatalogueReferenceTests {
         #expect(CatalogueReference.workLevel(reference) == expected)
     }
 
-    @Test("Exact contiguous match outranks number-only match outranks miss")
+    @Test("The named piece outranks its opus siblings, which outrank a miss")
     func tiers() {
         let ref = "Op. 28 No. 24"
         #expect(CatalogueReference.matchTier(
@@ -59,6 +59,48 @@ struct CatalogueReferenceTests {
             title: "Preludes, Op. 28 & 24 Variations", reference: ref) == 1)
         #expect(CatalogueReference.matchTier(
             title: "Nocturne Op. 9, No. 2", reference: ref) == 0)
+    }
+
+    @Test("A set's size is not the movement number")
+    func setSizeIsNotMovement() {
+        // The "24" of "24 Préludes" counts the set. Reading it as the movement
+        // ties every prelude in Op. 28 with the one actually asked for, which is
+        // how a search for No. 24 came back led by No. 6 and No. 4.
+        let ref = "Op. 28 No. 24"
+        #expect(CatalogueReference.matchTier(
+            title: "24 Préludes, Op. 28: No. 6 in B Minor", reference: ref) == 1)
+        #expect(CatalogueReference.matchTier(
+            title: "24 Preludes, Op. 28: No. 4 in E Minor", reference: ref) == 1)
+        #expect(CatalogueReference.matchTier(
+            title: "24 Préludes, Op. 28: No. 24 in D Minor", reference: ref) == 2)
+    }
+
+    @Test("A movement-first title still names the piece")
+    func movementFirstOrdering() {
+        // Apple Music mixes both orderings; only the pieces themselves are tier 2.
+        #expect(CatalogueReference.matchTier(
+            title: "Prélude No. 24 in D Minor, Op. 28", reference: "Op. 28 No. 24") == 2)
+        #expect(CatalogueReference.matchTier(
+            title: "Prélude No. 6 in B Minor, Op. 28", reference: "Op. 28 No. 24") == 1)
+    }
+
+    @Test("A key name is not read as a catalogue number")
+    func keyNameIsNotACatalogue() {
+        // "D" is Schubert's catalogue, but "in D Minor" is a key, not D. 24.
+        #expect(CatalogueReference.matchTier(
+            title: "Prelude in D Minor", reference: "D. 24") == 0)
+        #expect(CatalogueReference.matchTier(
+            title: "Impromptu in A-Flat Major, D. 899", reference: "D. 899") == 2)
+    }
+
+    @Test("A roman-numeral catalogue keeps its work number")
+    func romanCatalogueWorkNumber() {
+        #expect(CatalogueReference.matchTier(
+            title: "Piano Sonata No. 62 in E-Flat Major, Hob. XVI:52",
+            reference: "Hob. XVI 52") == 2)
+        #expect(CatalogueReference.matchTier(
+            title: "Piano Sonata No. 20 in C Minor, Hob. XVI:20",
+            reference: "Hob. XVI 52") == 0)
     }
 
     @Test("Matches across alias spellings and punctuation")
@@ -72,6 +114,41 @@ struct CatalogueReferenceTests {
         #expect(CatalogueReference.matchTier(
             title: "Preludes, Opus 28: No. 4 in E Minor",
             reference: "Op. 28 No. 4") == 2)
+    }
+
+    @Test("A bare ordinal names the movement on the work's own album")
+    func bareOrdinalMovement() {
+        // Real titles from "Chopin: Preludes, Op. 28" (Pogorelich): the album
+        // carries the opus and each track numbers itself "24." with no "No.",
+        // so matching the full reference finds nothing on the very album that
+        // holds the piece.
+        #expect(CatalogueReference.isMovement(
+            title: "24 Préludes, Op. 28, 24. in D Minor", of: "op 28 no 24"))
+        #expect(!CatalogueReference.isMovement(
+            title: "24 Préludes, Op. 28, 6. in B Minor", of: "op 28 no 24"))
+        #expect(!CatalogueReference.isMovement(
+            title: "24 Préludes, Op. 28, 4. in E Minor", of: "op 28 no 24"))
+    }
+
+    @Test("Movement matching accepts the spelled-out and movement-first forms")
+    func movementFormVariants() {
+        #expect(CatalogueReference.isMovement(
+            title: "24 Préludes, Op. 28: No. 24 in D Minor", of: "Op. 28 No. 24"))
+        #expect(CatalogueReference.isMovement(
+            title: "Prélude No. 24 in D Minor, Op. 28", of: "Op. 28 No. 24"))
+        #expect(!CatalogueReference.isMovement(
+            title: "24 Préludes, Op. 28: No. 15 in D-Flat Major", of: "Op. 28 No. 24"))
+    }
+
+    @Test("A work-only reference still needs a full match")
+    func workOnlyReferenceMovement() {
+        // "bwv 1041" names no movement, so every movement of the concerto is a
+        // legitimate hit — but an unrelated work is not.
+        #expect(CatalogueReference.movementNumber(of: "bwv 1041") == nil)
+        #expect(CatalogueReference.isMovement(
+            title: "Violin Concerto in A Minor, BWV 1041: I. Allegro", of: "bwv 1041"))
+        #expect(!CatalogueReference.isMovement(
+            title: "Violin Concerto in E Major, BWV 1042: I. Allegro", of: "bwv 1041"))
     }
 
     @Test("Ranks matches first, keeps original order within tiers")
