@@ -382,12 +382,23 @@ private struct SearchRow: View {
             }
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(title)
+                // Same split the player and queue use: the catalogue and movement
+                // move to their own line instead of being truncated away, which is
+                // what tells "Op. 28: No. 24" apart from its 23 siblings. Ordinary
+                // titles carry no detail and stay two lines.
+                let lines = ClassicalTitle.split(title)
+                Text(lines.work)
                     .font(.body)
                     .lineLimit(1)
+                if let detail = lines.detail {
+                    Text(detail)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
                 Text(subtitle)
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(lines.detail == nil ? .secondary : .tertiary)
                     .lineLimit(1)
             }
 
