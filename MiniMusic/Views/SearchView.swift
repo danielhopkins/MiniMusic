@@ -173,6 +173,7 @@ struct SearchView: View {
                             SearchRow(
                                 title: item.title,
                                 subtitle: item.subtitle,
+                                composer: searchVM.composer(for: item),
                                 artwork: item.artwork,
                                 isLibrary: item.isLibrary
                             )
@@ -367,8 +368,17 @@ struct SearchView: View {
 private struct SearchRow: View {
     let title: String
     let subtitle: String
+    var composer: String? = nil
     let artwork: Artwork?
     var isLibrary: Bool = false
+
+    /// "Composer · Performer" once a classical composer resolves, otherwise just
+    /// the performer — matching the queue and now-playing views. Given names are
+    /// abbreviated to initials to save horizontal space.
+    private var credit: String {
+        let abbreviated = composer.map(ComposerName.abbreviated) ?? ""
+        return [abbreviated, subtitle].filter { !$0.isEmpty }.joined(separator: " · ")
+    }
 
     var body: some View {
         HStack(spacing: 10) {
@@ -389,17 +399,17 @@ private struct SearchRow: View {
                 let lines = ClassicalTitle.split(title)
                 Text(lines.work)
                     .font(.body)
-                    .lineLimit(1)
+                    .lineLimit(2)
                 if let detail = lines.detail {
                     Text(detail)
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                        .lineLimit(1)
+                        .lineLimit(2)
                 }
-                Text(subtitle)
+                Text(credit)
                     .font(.caption)
                     .foregroundStyle(lines.detail == nil ? .secondary : .tertiary)
-                    .lineLimit(1)
+                    .lineLimit(2)
             }
 
             Spacer(minLength: 0)

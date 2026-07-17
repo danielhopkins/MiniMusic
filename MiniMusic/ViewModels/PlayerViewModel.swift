@@ -74,6 +74,60 @@ import Observation
         max(player.queue.entries.count - 1, 0)
     }
 
+    /// Composer names for queue rows, keyed by song ID `rawValue`. MusicKit's
+    /// queue entries don't carry composers, so a classical row would otherwise
+    /// show only the performer. Populated in bulk by `refreshQueueComposers()`.
+    private(set) var queueComposers: [String: String] = [:]
+
+    /// The resolved composer for a queue entry, or `nil` when the entry isn't a
+    /// song or its composer hasn't been fetched (e.g. a non-classical track).
+    func composer(for entry: ApplicationMusicPlayer.Queue.Entry) -> String? {
+        guard case let .song(song) = entry.item else { return nil }
+        return queueComposers[song.id.rawValue]
+    }
+
+    /// Resolves composers for the whole queue in one batched pass. Entries that
+    /// already carry a composer are used directly; the rest are fetched from the
+    /// catalog/library in chunked requests (via `fetchSongs`), so a long queue
+    /// costs a couple of round-trips rather than one per row. Song IDs are only
+    /// looked up once, so non-classical tracks aren't re-fetched as the queue
+    /// changes.
+    func refreshQueueComposers() {
+        var resolved = queueComposers
+        var missing: [String] = []
+        for entry in player.queue.entries {
+            guard case let .song(song) = entry.item else { continue }
+            let key = song.id.rawValue
+            if resolved[key] != nil || queueComposerAttempted.contains(key) { continue }
+            if let name = song.composerName, !name.isEmpty {
+                resolved[key] = name
+                queueComposerAttempted.insert(key)
+            } else {
+                missing.append(key)
+            }
+        }
+        if resolved.count != queueComposers.count { queueComposers = resolved }
+        guard !missing.isEmpty else { return }
+
+        queueComposerTask?.cancel()
+        queueComposerTask = Task { [weak self] in
+            let songs = await Self.fetchSongs(for: missing)
+            guard !Task.isCancelled, let self else { return }
+            var found: [String: String] = [:]
+            for song in songs {
+                // Mark every fetched ID attempted, so tracks with no composer
+                // (i.e. non-classical) aren't looked up again. IDs the request
+                // couldn't resolve stay eligible for a later retry.
+                self.queueComposerAttempted.insert(song.id.rawValue)
+                if let name = song.composerName, !name.isEmpty {
+                    found[song.id.rawValue] = name
+                }
+            }
+            guard !found.isEmpty else { return }
+            self.queueComposers.merge(found) { _, new in new }
+        }
+    }
+
     // MARK: - Private
 
     nonisolated(unsafe) private let player = ApplicationMusicPlayer.shared
@@ -84,6 +138,10 @@ import Observation
     /// ID of the item the displayed metadata belongs to, so a late catalog
     /// fetch can be discarded if the track has already changed.
     @ObservationIgnored private var currentItemID: MusicItemID?
+    /// Song IDs already looked up for a composer (found or not), so a queue full
+    /// of non-classical tracks isn't re-fetched on every queue change.
+    @ObservationIgnored private var queueComposerAttempted: Set<String> = []
+    @ObservationIgnored private var queueComposerTask: Task<Void, Never>?
 
     // Queue persistence
     @ObservationIgnored private var persistTask: Task<Void, Never>?
@@ -423,6 +481,7 @@ import Observation
                 guard let self else { return }
                 Task {
                     self.updateCurrentEntry()
+                    self.refreshQueueComposers()
                 }
             }
             .store(in: &cancellables)
@@ -664,37 +723,8 @@ import Observation
     }
 
     /// Fetches songs for the given IDs from the catalog and library, returning
-    /// them in the original order. Library IDs (prefixed `i.`) are resolved
-    /// against the library; everything else against the catalog.
+    /// them in the original order.
     private nonisolated static func fetchSongs(for ids: [String]) async -> [Song] {
-        let libraryIDs = ids.filter { $0.hasPrefix("i.") }
-        let catalogIDs = ids.filter { !$0.hasPrefix("i.") }
-
-        var byID: [String: Song] = [:]
-
-        for batch in catalogIDs.chunked(into: 25) {
-            do {
-                let request = MusicCatalogResourceRequest<Song>(
-                    matching: \.id, memberOf: batch.map { MusicItemID($0) }
-                )
-                let response = try await request.response()
-                for song in response.items { byID[song.id.rawValue] = song }
-            } catch {
-                // Skip this batch; other songs still restore.
-            }
-        }
-
-        for batch in libraryIDs.chunked(into: 25) {
-            do {
-                var request = MusicLibraryRequest<Song>()
-                request.filter(matching: \.id, memberOf: batch.map { MusicItemID($0) })
-                let response = try await request.response()
-                for song in response.items { byID[song.id.rawValue] = song }
-            } catch {
-                // Skip this batch; other songs still restore.
-            }
-        }
-
-        return ids.compactMap { byID[$0] }
+        await ComposerResolver.fetchSongs(for: ids)
     }
 }

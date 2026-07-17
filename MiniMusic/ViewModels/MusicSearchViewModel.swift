@@ -45,6 +45,20 @@ import Observation
     /// through this view model.
     let history = SearchHistoryStore()
 
+    /// Composer names for song results, keyed by song ID `rawValue`. Catalog and
+    /// library searches don't hydrate `composerName`, so classical rows would
+    /// show only the performer without this. Populated by `refreshComposers()`.
+    private(set) var composers: [String: String] = [:]
+
+    /// The resolved composer for a search result, or `nil` when it isn't a song
+    /// or its composer hasn't been fetched (e.g. a non-classical track).
+    func composer(for item: SearchResultItem) -> String? {
+        switch item {
+        case .catalogSong(let s), .librarySong(let s): return composers[s.id.rawValue]
+        default: return nil
+        }
+    }
+
     var isEmpty: Bool {
         songs.isEmpty && albums.isEmpty && artists.isEmpty && playlists.isEmpty
             && librarySongs.isEmpty && libraryAlbums.isEmpty && libraryArtists.isEmpty
@@ -90,6 +104,10 @@ import Observation
 
     private var searchTask: Task<Void, Never>?
     private var debounceTask: Task<Void, Never>?
+    private var composerTask: Task<Void, Never>?
+    /// Song IDs already looked up for a composer (found or not), so results
+    /// without one aren't re-fetched every time the song list changes.
+    private var composerAttempted: Set<String> = []
     private let intentParser = SearchIntentParser()
 
     // MARK: - Prewarm
@@ -170,7 +188,48 @@ import Observation
             if !Task.isCancelled {
                 isLoading = false
                 recordHistory(query: trimmed)
+                refreshComposers()
             }
+        }
+    }
+
+    /// Resolves composers for the current song results in one batched pass,
+    /// mirroring the queue. Songs that already carry a composer are used
+    /// directly; the rest are fetched by ID via `ComposerResolver`. Each ID is
+    /// looked up only once, so non-classical results aren't re-fetched as the
+    /// list changes.
+    private func refreshComposers() {
+        var resolved = composers
+        var missing: [String] = []
+        for song in Array(songs) + Array(librarySongs) {
+            let key = song.id.rawValue
+            if resolved[key] != nil || composerAttempted.contains(key) { continue }
+            if let name = song.composerName, !name.isEmpty {
+                resolved[key] = name
+                composerAttempted.insert(key)
+            } else {
+                missing.append(key)
+            }
+        }
+        if resolved.count != composers.count { composers = resolved }
+        guard !missing.isEmpty else { return }
+
+        composerTask?.cancel()
+        composerTask = Task { [weak self] in
+            let fetched = await ComposerResolver.fetchSongs(for: missing)
+            guard !Task.isCancelled, let self else { return }
+            var found: [String: String] = [:]
+            for song in fetched {
+                // Mark every fetched ID attempted so tracks with no composer
+                // aren't looked up again; IDs the request couldn't resolve stay
+                // eligible for a later retry.
+                self.composerAttempted.insert(song.id.rawValue)
+                if let name = song.composerName, !name.isEmpty {
+                    found[song.id.rawValue] = name
+                }
+            }
+            guard !found.isEmpty else { return }
+            self.composers.merge(found) { _, new in new }
         }
     }
 

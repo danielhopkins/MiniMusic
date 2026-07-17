@@ -19,6 +19,7 @@ struct QueueView: View {
         .frame(height: 450)
         .navigationBarBackButtonHidden(true)
         .toolbar(.hidden, for: .automatic)
+        .task { playerVM.refreshQueueComposers() }
     }
 
     // MARK: - Header
@@ -182,8 +183,18 @@ struct QueueView: View {
 // MARK: - Queue Row
 
 private struct QueueRow: View {
+    @Environment(PlayerViewModel.self) private var playerVM
     let entry: ApplicationMusicPlayer.Queue.Entry
     let isCurrent: Bool
+
+    /// "Composer · Performer" for classical rows once the composer resolves,
+    /// otherwise just the performer — matching the now-playing view's credit
+    /// line. Given names are abbreviated to initials to save horizontal space.
+    private var credit: String {
+        let composer = playerVM.composer(for: entry).map(ComposerName.abbreviated) ?? ""
+        let performer = entry.subtitle ?? ""
+        return [composer, performer].filter { !$0.isEmpty }.joined(separator: " · ")
+    }
 
     var body: some View {
         HStack(spacing: 10) {
@@ -207,8 +218,8 @@ private struct QueueRow: View {
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                 }
-                if let subtitle = entry.subtitle, !subtitle.isEmpty {
-                    Text(subtitle)
+                if !credit.isEmpty {
+                    Text(credit)
                         .font(.caption)
                         .foregroundStyle(.tertiary)
                         .lineLimit(1)
