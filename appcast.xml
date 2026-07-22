@@ -3,12 +3,12 @@
     <channel>
         <title>MiniMusic</title>
         <item>
-            <title>26.717.0</title>
-            <pubDate>Fri, 17 Jul 2026 10:21:44 -0600</pubDate>
-            <sparkle:version>17</sparkle:version>
-            <sparkle:shortVersionString>26.717.0</sparkle:shortVersionString>
+            <title>26.722.0</title>
+            <pubDate>Wed, 22 Jul 2026 11:24:53 -0600</pubDate>
+            <sparkle:version>18</sparkle:version>
+            <sparkle:shortVersionString>26.722.0</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>27.0</sparkle:minimumSystemVersion>
-            <enclosure url="https://github.com/danielhopkins/MiniMusic/releases/download/v26.717.0/MiniMusic.dmg" length="3929557" type="application/octet-stream" sparkle:edSignature="uHLSUtTujLIbYL/Rd2WfEOXIDLf2wU4vnWB7CpFd2BbjQMSxvNYOr1ujBXYvufAOmhm/Jx4wKUwgl5val2i+Aw=="/>
+            <enclosure url="https://github.com/danielhopkins/MiniMusic/releases/download/v26.722.0/MiniMusic.dmg" length="3940749" type="application/octet-stream" sparkle:edSignature="jEWefF6Pnko3HSx1RGuAZ792M1DpsxkBEhDBFgHmUYwE+xXGF8L8ihOh7gAf04cTVsQpb0l4gSaYyVhAjEpnBg=="/>
         </item>
     </channel>
 </rss>
