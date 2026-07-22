@@ -67,8 +67,13 @@ struct PlayerView: View {
                 .padding(.top, 4)
             trackInfoRow
                 .padding(.top, 8)
-            progressSection
-                .padding(.top, 6)
+            if playerVM.isLiveStation {
+                liveIndicator
+                    .padding(.top, 6)
+            } else {
+                progressSection
+                    .padding(.top, 6)
+            }
             Divider().padding(.top, 4)
             navigationSection
         }
@@ -320,12 +325,14 @@ struct PlayerView: View {
 
     private var controlsSection: some View {
         HStack(spacing: 32) {
-            Button { playerVM.skipBackward() } label: {
-                Image(systemName: "backward.fill")
-                    .font(.title2)
+            if !playerVM.isLiveStation {
+                Button { playerVM.skipBackward() } label: {
+                    Image(systemName: "backward.fill")
+                        .font(.title2)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Previous track")
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Previous track")
 
             Button { playerVM.togglePlayPause() } label: {
                 Image(systemName: playerVM.isPlaying ? "pause.fill" : "play.fill")
@@ -335,14 +342,34 @@ struct PlayerView: View {
             .keyboardShortcut(.space, modifiers: [])
             .accessibilityLabel(playerVM.isPlaying ? "Pause" : "Play")
 
-            Button { playerVM.skipForward() } label: {
-                Image(systemName: "forward.fill")
-                    .font(.title2)
+            if !playerVM.isLiveStation {
+                Button { playerVM.skipForward() } label: {
+                    Image(systemName: "forward.fill")
+                        .font(.title2)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Next track")
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Next track")
         }
         .padding(.vertical, 4)
+    }
+
+    // MARK: - Live Indicator
+
+    /// Stands in for the progress bar during a live broadcast, which has no
+    /// position to show.
+    private var liveIndicator: some View {
+        HStack(spacing: 5) {
+            Circle()
+                .fill(.red)
+                .frame(width: 6, height: 6)
+            Text("LIVE")
+                .font(.caption2)
+                .fontWeight(.semibold)
+                .foregroundStyle(.secondary)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Live broadcast")
     }
 
     // MARK: - Progress

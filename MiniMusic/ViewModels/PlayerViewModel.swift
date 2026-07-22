@@ -60,6 +60,14 @@ import Observation
         return resolvedSourceArtwork ?? source.displayArtwork(nowPlaying: artwork)
     }
 
+    /// True while a live radio broadcast is playing. A live stream has no
+    /// duration, no seekable position, and nothing to skip to, so the transport
+    /// UI has to drop its scrubber and skip controls rather than show dead ones.
+    var isLiveStation: Bool {
+        guard case .station(let station) = playbackSource else { return false }
+        return station.isLive
+    }
+
     // MARK: - Queue Access
 
     var queueEntries: [ApplicationMusicPlayer.Queue.Entry] {
@@ -302,6 +310,8 @@ import Observation
             playPlaylist(playlist, isLibrary: true)
         case .catalogPlaylist(let playlist):
             playPlaylist(playlist, isLibrary: false)
+        case .catalogStation(let station):
+            play(station)
         }
     }
 
@@ -501,7 +511,10 @@ import Observation
         }
 
         currentTitle = entry.title
-        currentArtist = entry.subtitle ?? ""
+        // A live stream puts its whole metadata string in both fields, so the
+        // subtitle would just repeat the title back under it.
+        let subtitle = entry.subtitle ?? ""
+        currentArtist = subtitle == entry.title ? "" : subtitle
         artwork = entry.artwork
 
         // Read full song metadata for album title, duration, and classical fields
@@ -570,7 +583,10 @@ import Observation
                 if let pending = self.pendingResumeTime, !self.isPlaying {
                     self.playbackTime = pending
                 } else {
-                    self.playbackTime = self.player.playbackTime
+                    // A live stream reports a NaN playback time, which would
+                    // otherwise reach the progress Slider's value binding.
+                    let time = self.player.playbackTime
+                    self.playbackTime = time.isFinite ? time : 0
                 }
                 // Persist the playback position roughly every 5s while playing
                 // so resume lands near where we left off.
@@ -601,6 +617,10 @@ import Observation
     /// can't clobber the saved snapshot before it's restored.
     func persistQueue() {
         guard restoreCompleted else { return }
+        // A station's queue holds one opaque live entry with no underlying song,
+        // so it would collect no IDs and clear the snapshot. Radio is a detour,
+        // not a new queue — leave the saved one intact to come back to.
+        if case .station = playbackSource { return }
 
         let currentEntryID = player.queue.currentEntry?.id
         var ids: [String] = []

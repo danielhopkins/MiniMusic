@@ -9,6 +9,7 @@ enum SearchResultItem: Identifiable, Equatable {
     case catalogAlbum(Album)
     case catalogArtist(Artist)
     case catalogPlaylist(Playlist)
+    case catalogStation(Station)
 
     var id: String {
         switch self {
@@ -20,6 +21,7 @@ enum SearchResultItem: Identifiable, Equatable {
         case .catalogAlbum(let a): return "cat-album-\(a.id)"
         case .catalogArtist(let a): return "cat-artist-\(a.id)"
         case .catalogPlaylist(let p): return "cat-playlist-\(p.id)"
+        case .catalogStation(let s): return "cat-station-\(s.id)"
         }
     }
 
@@ -29,6 +31,7 @@ enum SearchResultItem: Identifiable, Equatable {
         case .libraryAlbum(let a), .catalogAlbum(let a): return a.title
         case .libraryArtist(let a), .catalogArtist(let a): return a.name
         case .libraryPlaylist(let p), .catalogPlaylist(let p): return p.name
+        case .catalogStation(let s): return s.name
         }
     }
 
@@ -38,6 +41,7 @@ enum SearchResultItem: Identifiable, Equatable {
         case .libraryAlbum(let a), .catalogAlbum(let a): return a.artistName
         case .libraryArtist, .catalogArtist: return "Artist"
         case .libraryPlaylist(let p), .catalogPlaylist(let p): return p.curatorName ?? "Apple Music"
+        case .catalogStation(let s): return s.stationProviderName ?? (s.isLive ? "Live Radio" : "Station")
         }
     }
 
@@ -47,6 +51,7 @@ enum SearchResultItem: Identifiable, Equatable {
         case .libraryAlbum(let a), .catalogAlbum(let a): return a.artwork
         case .libraryArtist(let a), .catalogArtist(let a): return a.artwork
         case .libraryPlaylist(let p), .catalogPlaylist(let p): return p.artwork
+        case .catalogStation(let s): return s.artwork
         }
     }
 
@@ -60,13 +65,15 @@ enum SearchResultItem: Identifiable, Equatable {
         case .catalogAlbum: return "Albums"
         case .catalogArtist: return "Artists"
         case .catalogPlaylist: return "Playlists"
+        case .catalogStation: return "Radio Stations"
         }
     }
 
     var isLibrary: Bool {
         switch self {
         case .librarySong, .libraryAlbum, .libraryArtist, .libraryPlaylist: return true
-        case .catalogSong, .catalogAlbum, .catalogArtist, .catalogPlaylist: return false
+        case .catalogSong, .catalogAlbum, .catalogArtist, .catalogPlaylist, .catalogStation:
+            return false
         }
     }
 
@@ -74,6 +81,16 @@ enum SearchResultItem: Identifiable, Equatable {
         switch self {
         case .libraryArtist, .catalogArtist: return true
         default: return false
+        }
+    }
+
+    /// Whether "Add to Library" and "Favorite" apply. Artists aren't library
+    /// items, and stations can't be added or rated — mirroring
+    /// `PlaybackSource.supportsLibraryActions` for the now-playing source.
+    var supportsLibraryActions: Bool {
+        switch self {
+        case .libraryArtist, .catalogArtist, .catalogStation: return false
+        default: return true
         }
     }
 

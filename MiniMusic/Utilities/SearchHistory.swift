@@ -27,10 +27,12 @@ struct SearchHistoryEntry: Codable, Identifiable {
         var albums = 0
         var artists = 0
         var playlists = 0
+        /// Defaulted so history saved before radio search existed still decodes.
+        var stations = 0
 
         var total: Int {
             librarySongs + libraryAlbums + libraryArtists + libraryPlaylists
-                + songs + albums + artists + playlists
+                + songs + albums + artists + playlists + stations
         }
     }
 }

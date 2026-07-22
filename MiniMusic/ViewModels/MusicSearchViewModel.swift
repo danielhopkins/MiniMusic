@@ -13,6 +13,7 @@ import Observation
     private(set) var albums: MusicItemCollection<Album> = []
     private(set) var artists: MusicItemCollection<Artist> = []
     private(set) var playlists: MusicItemCollection<Playlist> = []
+    private(set) var stations: MusicItemCollection<Station> = []
     private(set) var librarySongs: MusicItemCollection<Song> = []
     private(set) var libraryAlbums: MusicItemCollection<Album> = []
     private(set) var libraryArtists: MusicItemCollection<Artist> = []
@@ -61,6 +62,7 @@ import Observation
 
     var isEmpty: Bool {
         songs.isEmpty && albums.isEmpty && artists.isEmpty && playlists.isEmpty
+            && stations.isEmpty
             && librarySongs.isEmpty && libraryAlbums.isEmpty && libraryArtists.isEmpty
             && libraryPlaylists.isEmpty
     }
@@ -88,7 +90,13 @@ import Observation
         let catArtists = artists.filter { !libraryArtistKeys.contains($0.name) }.prefix(cap)
         let catPlaylists = playlists.filter { !libraryPlaylistKeys.contains($0.name) }.prefix(cap)
 
+        // Stations lead only when they're what was asked for. Now that genre
+        // stations count, a plain "brahms" also matches "Brahms Station" — a
+        // reasonable thing to offer, but not ahead of the actual music.
+        let stationItems = stations.prefix(cap).map { SearchResultItem.catalogStation($0) }
+
         var items: [SearchResultItem] = []
+        if activeCategories == [.station] { items += stationItems }
         items += libSongs.map { .librarySong($0) }
         items += libAlbums.map { .libraryAlbum($0) }
         items += libArtists.map { .libraryArtist($0) }
@@ -97,6 +105,7 @@ import Observation
         items += catAlbums.map { .catalogAlbum($0) }
         items += catArtists.map { .catalogArtist($0) }
         items += catPlaylists.map { .catalogPlaylist($0) }
+        if activeCategories != [.station] { items += stationItems }
         return items
     }
 
@@ -154,12 +163,21 @@ import Observation
 
             // Resolve facets: an instant deterministic parse, refined into
             // structured facets by the on-device model when it's available.
-            var facets = SearchFacets(deterministicallyParsing: trimmed)
+            let deterministic = SearchFacets(deterministicallyParsing: trimmed)
+            var facets = deterministic
             var refinedByModel = false
             if let intent = await intentParser.parse(trimmed),
                !intent.term.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 facets = intent.facets
                 refinedByModel = true
+            }
+            // A call sign is an opaque identifier, not a word, and the model's
+            // spelling correction treats it as one — "kbco radio" comes back as
+            // "CPR", which would quietly play a station the user didn't ask for.
+            // Wrong-station is worse than no-station, so a radio search always
+            // keeps the literal term that was typed.
+            if facets.categories.contains(.station) {
+                facets.term = deterministic.term
             }
 
             guard !Task.isCancelled else { return }
@@ -245,7 +263,8 @@ import Observation
             songs: songs.count,
             albums: albums.count,
             artists: artists.count,
-            playlists: playlists.count
+            playlists: playlists.count,
+            stations: stations.count
         )
         let top = allResults.prefix(6).map { "\($0.title) — \($0.subtitle)" }
         history.record(
@@ -520,6 +539,7 @@ import Observation
         if wanted.contains(.album) { types.append(Album.self) }
         if wanted.contains(.artist) { types.append(Artist.self) }
         if wanted.contains(.playlist) { types.append(Playlist.self) }
+        if wanted.contains(.station) { types.append(Station.self) }
 
         do {
             var request = MusicCatalogSearchRequest(term: term, types: types)
@@ -534,12 +554,47 @@ import Observation
             albums = response.albums
             artists = response.artists
             playlists = response.playlists
+            stations = Self.matchingStations(response.stations, matching: term)
         } catch is CancellationError {
             // Ignored — search was superseded by a newer query.
         } catch {
             guard !Task.isCancelled else { return }
             errorMessage = error.localizedDescription
         }
+    }
+
+    /// Narrows station results to those whose name actually matches the query.
+    ///
+    /// This gate is the only thing standing between a query and a wrong station,
+    /// because an unmatched name doesn't come back empty: searching "z100"
+    /// returns twenty unrelated stations by fuzzy fallback. Requiring every
+    /// query token to appear in the station's name turns those into no results,
+    /// which is the honest answer for a station Apple doesn't carry.
+    ///
+    /// Deliberately *not* filtered on `isLive`. Apple's catalog holds both live
+    /// broadcasts (its own stations and NPR members) and algorithmic genre
+    /// stations like "Classical Station" or "Bach Station", and both are things
+    /// worth finding. The name check alone is what keeps the junk out.
+    private static func matchingStations(
+        _ stations: MusicItemCollection<Station>, matching term: String
+    ) -> MusicItemCollection<Station> {
+        func normalized(_ text: String) -> String {
+            text.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: nil)
+        }
+        // Single characters are dropped: they match almost any name, which would
+        // defeat the point of the check.
+        let tokens = normalized(term)
+            .split { !$0.isLetter && !$0.isNumber }
+            .map(String.init)
+            .filter { $0.count > 1 }
+        guard !tokens.isEmpty else { return [] }
+
+        return MusicItemCollection(
+            stations.filter { station in
+                let name = normalized(station.name)
+                return tokens.allSatisfy { name.contains($0) }
+            }
+        )
     }
 
     /// Zeroes every result collection without touching loading/error/intent
@@ -549,6 +604,7 @@ import Observation
         albums = []
         artists = []
         playlists = []
+        stations = []
         librarySongs = []
         libraryAlbums = []
         libraryArtists = []

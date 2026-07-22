@@ -47,6 +47,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             Task { await CatalogueProbe.run(query: query, viewModel: searchVM) }
             return
         }
+        if let queries = CatalogueProbe.requestedStationQueries {
+            Task { await CatalogueProbe.runStations(queries: queries) }
+            return
+        }
+        if let monitor = CatalogueProbe.requestedLiveMonitor {
+            Task { await CatalogueProbe.runLiveMonitor(id: monitor.id, seconds: monitor.seconds) }
+            return
+        }
+        if let queries = CatalogueProbe.requestedPipelineQueries {
+            Task { await CatalogueProbe.runPipeline(queries: queries, viewModel: searchVM) }
+            return
+        }
         #endif
 
         migrateConflictingShortcut()

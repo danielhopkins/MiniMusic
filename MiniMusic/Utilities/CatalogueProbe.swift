@@ -22,6 +22,190 @@ enum CatalogueProbe {
         ProcessInfo.processInfo.environment["MINIMUSIC_PROBE"]
     }
 
+    /// Station queries to probe, or nil for a normal launch. Accepted either as
+    /// `MINIMUSIC_STATION_PROBE="a|b"` or as launch arguments
+    /// `--station-probe a b`, so the probe can be started through `open`, which
+    /// is the only way it gets a TCC identity that MusicKit will accept.
+    static var requestedStationQueries: [String]? {
+        if let env = ProcessInfo.processInfo.environment["MINIMUSIC_STATION_PROBE"] {
+            return env.split(separator: "|").map { $0.trimmingCharacters(in: .whitespaces) }
+        }
+        let args = ProcessInfo.processInfo.arguments
+        guard let flag = args.firstIndex(of: "--station-probe") else { return nil }
+        let queries = Array(args[args.index(after: flag)...])
+        return queries.isEmpty ? nil : queries
+    }
+
+    /// Where the station probe writes its report. `open` detaches the app from
+    /// the terminal, so stdout goes nowhere — a file is how the result gets back.
+    private static let stationReportPath = NSTemporaryDirectory() + "minimusic-station-probe.txt"
+
+    /// Searches the catalog for stations matching each query and prints what
+    /// came back, including whether each is a live broadcast and who provides
+    /// it. Answers whether terrestrial call signs ("KBCO") are reachable at all.
+    ///
+    ///   MINIMUSIC_STATION_PROBE="kbco|cpr classical" \
+    ///     ~/Library/Developer/Xcode/DerivedData/MiniMusic-*/Build/Products/Debug/MiniMusic.app/Contents/MacOS/MiniMusic
+    static func runStations(queries: [String]) async {
+        var report = ""
+        func emit(_ line: String) {
+            print(line)
+            report += line + "\n"
+        }
+
+        // MusicKit refuses catalog requests until the Apple Music grant is
+        // resolved for this launch, so ask before searching.
+        let status = await MusicAuthorization.request()
+        emit("authorization: \(status)")
+
+        for query in queries {
+            emit("── station probe: \"\(query)\"")
+            do {
+                var request = MusicCatalogSearchRequest(term: query, types: [Station.self])
+                request.limit = 25
+                let response = try await request.response()
+                emit("   stations: \(response.stations.count)")
+                for station in response.stations {
+                    emit(String(format: "     %@  live=%@  provider=%@  id=%@",
+                                station.name,
+                                station.isLive ? "YES" : "no",
+                                station.stationProviderName ?? "—",
+                                station.id.rawValue))
+                    if let note = station.editorialNotes?.short ?? station.editorialNotes?.standard {
+                        emit("        \(note)")
+                    }
+                }
+                if response.stations.isEmpty { emit("   ⚠️ no stations") }
+            } catch {
+                emit("   ERROR: \(error)")
+            }
+        }
+
+        try? report.write(toFile: stationReportPath, atomically: true, encoding: .utf8)
+        exit(0)
+    }
+
+    /// Queries to run through the whole search pipeline, or nil for a normal
+    /// launch. Unlike `MINIMUSIC_PROBE`, this reports every result's kind, so it
+    /// can show which categories a query actually routed to.
+    static var requestedPipelineQueries: [String]? {
+        let args = ProcessInfo.processInfo.arguments
+        guard let flag = args.firstIndex(of: "--search-probe") else { return nil }
+        let queries = Array(args[args.index(after: flag)...])
+        return queries.isEmpty ? nil : queries
+    }
+
+    /// Drives `MusicSearchViewModel` exactly as typing does and reports what each
+    /// query resolved to, so routing (did "cpr radio" scope to stations?) and
+    /// results can be checked together.
+    static func runPipeline(queries: [String], viewModel: MusicSearchViewModel) async {
+        var report = ""
+        func emit(_ line: String) {
+            print(line)
+            report += line + "\n"
+        }
+
+        _ = await MusicAuthorization.request()
+
+        for query in queries {
+            emit("── pipeline probe: \"\(query)\"")
+            viewModel.searchQuery = query
+            try? await Task.sleep(for: .milliseconds(900))
+            for _ in 0..<100 where viewModel.isLoading {
+                try? await Task.sleep(for: .milliseconds(100))
+            }
+            let results = viewModel.allResults
+            emit("   results: \(results.count)  (intelligence: \(viewModel.usedIntelligence))")
+            for item in results.prefix(12) {
+                emit("     [\(item.sectionName)] \(item.title) — \(item.subtitle)")
+            }
+            if results.isEmpty { emit("   ⚠️ no results") }
+        }
+
+        try? report.write(toFile: stationReportPath, atomically: true, encoding: .utf8)
+        exit(0)
+    }
+
+    /// Station ID and duration for the live-metadata monitor, or nil.
+    static var requestedLiveMonitor: (id: String, seconds: Int)? {
+        let args = ProcessInfo.processInfo.arguments
+        guard let flag = args.firstIndex(of: "--live-monitor"),
+              args.count > flag + 1 else { return nil }
+        let id = args[flag + 1]
+        let seconds = args.count > flag + 2 ? Int(args[flag + 2]) ?? 60 : 60
+        return (id, seconds)
+    }
+
+    /// Plays a live station and watches what the queue actually exposes over
+    /// time: every `objectWillChange` publish alongside a once-per-second poll of
+    /// the current entry. Whether the track metadata arrives at all, and whether
+    /// a publish accompanies it, is what decides how now-playing has to observe.
+    static func runLiveMonitor(id: String, seconds: Int) async {
+        var report = ""
+        func emit(_ line: String) {
+            print(line)
+            report += line + "\n"
+        }
+
+        _ = await MusicAuthorization.request()
+        let player = ApplicationMusicPlayer.shared
+
+        do {
+            let request = MusicCatalogResourceRequest<Station>(
+                matching: \.id, equalTo: MusicItemID(id))
+            guard let station = try await request.response().items.first else {
+                emit("⚠️ station not found"); exit(1)
+            }
+            emit("station: \(station.name)  live=\(station.isLive)")
+            player.queue = [station]
+            try await player.play()
+        } catch {
+            emit("ERROR: \(error)"); exit(1)
+        }
+
+        let start = Date()
+        func stamp() -> String { String(format: "%5.1fs", Date().timeIntervalSince(start)) }
+
+        var publishes = 0
+        let cancellable = player.queue.objectWillChange.sink { _ in
+            publishes += 1
+            print("\(stamp())  ⚡️ objectWillChange #\(publishes)")
+        }
+
+        // Snapshot the entry each second; log only when something changed, so the
+        // report shows transitions rather than a wall of identical rows.
+        var last = ""
+        var publishesAtLast = 0
+        for _ in 0..<seconds {
+            try? await Task.sleep(for: .seconds(1))
+            let entry = player.queue.currentEntry
+            let itemKind: String
+            switch entry?.item {
+            case .song(let s): itemKind = "song(\(s.title))"
+            case .musicVideo: itemKind = "musicVideo"
+            case .none: itemKind = "nil"
+            @unknown default: itemKind = "unknown"
+            }
+            let snapshot = """
+                id=\(entry?.id ?? "—")  title=\(entry?.title ?? "—")  \
+                subtitle=\(entry?.subtitle ?? "—")  artwork=\(entry?.artwork != nil)  \
+                item=\(itemKind)
+                """
+            if snapshot != last {
+                emit("\(stamp())  [publishes: \(publishes), +\(publishes - publishesAtLast)]")
+                emit("          \(snapshot)")
+                last = snapshot
+                publishesAtLast = publishes
+            }
+        }
+        emit("total publishes: \(publishes)")
+        cancellable.cancel()
+        player.pause()
+
+        try? report.write(toFile: stationReportPath, atomically: true, encoding: .utf8)
+        exit(0)
+    }
+
     /// Runs `query` through `viewModel` and prints each result with the
     /// catalogue tier it scored, then exits. Tier 2 is the piece asked for,
     /// 1 a sibling in the same opus, 0 unrelated — so a correct search shows

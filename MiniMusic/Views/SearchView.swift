@@ -65,6 +65,18 @@ struct SearchView: View {
         .animation(.easeInOut(duration: 0.2), value: searchVM.usedIntelligence)
     }
 
+    // MARK: - Playing a Result
+
+    /// Starts a result and returns to the player. Both ways of choosing a result
+    /// — clicking a row and pressing Return on the selection — go through here,
+    /// so they can't drift apart on what "choosing" entails.
+    private func play(_ item: SearchResultItem) {
+        playerVM.playItem(item)
+        searchVM.searchQuery = ""
+        searchVM.clearResults()
+        dismiss()
+    }
+
     // MARK: - Key Handling
 
     private func installKeyMonitor() {
@@ -81,10 +93,7 @@ struct SearchView: View {
                 if let index = selectedIndex {
                     let results = searchVM.allResults
                     if index >= 0 && index < results.count {
-                        playerVM.playItem(results[index])
-                        searchVM.searchQuery = ""
-                        searchVM.clearResults()
-                        dismiss()
+                        play(results[index])
                         return nil
                     }
                 }
@@ -177,7 +186,7 @@ struct SearchView: View {
                                 artwork: item.artwork,
                                 isLibrary: item.isLibrary
                             )
-                            .onTapGesture { playerVM.playItem(item) }
+                            .onTapGesture { play(item) }
 
                             actionButtons(for: item)
                         }
@@ -256,7 +265,7 @@ struct SearchView: View {
 
     @ViewBuilder
     private func actionButtons(for item: SearchResultItem) -> some View {
-        if !item.isArtist {
+        if item.supportsLibraryActions {
             HStack(spacing: 2) {
                 if item.isLibrary || addedToLibraryIDs.contains(item.id) {
                     Image(systemName: "checkmark.circle.fill")
@@ -283,7 +292,7 @@ struct SearchView: View {
 
     @ViewBuilder
     private func contextMenuItems(for item: SearchResultItem) -> some View {
-        if !item.isLibrary && !item.isArtist {
+        if !item.isLibrary && item.supportsLibraryActions {
             if addedToLibraryIDs.contains(item.id) {
                 Button("Added to Library", systemImage: "checkmark.circle.fill") {}
                     .disabled(true)
@@ -293,7 +302,7 @@ struct SearchView: View {
                 }
             }
         }
-        if !item.isArtist {
+        if item.supportsLibraryActions {
             Button(
                 favoritedIDs.contains(item.id) ? "Favorited" : "Favorite",
                 systemImage: favoritedIDs.contains(item.id) ? "star.fill" : "star"
@@ -357,7 +366,7 @@ struct SearchView: View {
         case .libraryAlbum(let a): return ("library-albums", a.id)
         case .catalogPlaylist(let p): return ("playlists", p.id)
         case .libraryPlaylist(let p): return ("library-playlists", p.id)
-        case .catalogArtist, .libraryArtist:
+        case .catalogArtist, .libraryArtist, .catalogStation:
             throw CancellationError()
         }
     }

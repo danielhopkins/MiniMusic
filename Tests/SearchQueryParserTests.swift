@@ -10,6 +10,8 @@ struct SearchQueryParserTests {
         ("mozart album", "mozart", .album),
         ("jazz song", "jazz", .song),
         ("beethoven track", "beethoven", .song),
+        ("cpr radio", "cpr", .station),
+        ("wnyc station", "wnyc", .station),
     ])
     func trailingKeyword(input: String, term: String, category: SearchCategory) {
         let result = SearchQueryParser.parse(input)
@@ -29,7 +31,7 @@ struct SearchQueryParserTests {
     }
 
     @Test("Leaves a bare type word as a normal all-category search", arguments: [
-        "playlist", "artist", "songs", "album",
+        "playlist", "artist", "songs", "album", "radio", "station",
     ])
     func bareKeyword(input: String) {
         let result = SearchQueryParser.parse(input)

@@ -36,7 +36,13 @@ final class SearchIntentParser {
               reference here formatted with periods ("Op. 28 No. 24"), keep the \
               composer in artist, and never discard the numbers.
             - categories: the kind of RESULT the user wants to see (songs, \
-              albums, artists, playlists); empty if no type is named. Almost \
+              albums, artists, playlists, stations); empty if no type is named. \
+              Choose "station" when the user asks for a radio station or live \
+              broadcast — usually a call sign or network name followed by \
+              "radio" or "station" ("cpr radio", "wnyc station", "npr radio"). \
+              Put ONLY the call sign or network name in term; drop the word \
+              "radio"/"station" itself, and never expand a call sign into what \
+              its letters might stand for. Almost \
               never choose "artist": pick it ONLY when the user literally wants a \
               list of performers or bands (e.g. "bands like Radiohead", "find the \
               artist named X"). Simply mentioning an artist is NOT a request for \
@@ -62,7 +68,8 @@ final class SearchIntentParser {
             No. 24", categories [song]. "bach bwv 1041" → term "Bach BWV 1041", \
             artist "Bach", song "BWV 1041", categories [song]. "beethoven op \
             111" → term "Beethoven Op. 111", artist "Beethoven", song "Op. \
-            111", categories [song].
+            111", categories [song]. "cpr radio" → term "CPR", categories \
+            [station]. "npr radio" → term "NPR", categories [station].
             """
 
     /// A session warmed by `prewarm()`, consumed by the next `parse` so the first

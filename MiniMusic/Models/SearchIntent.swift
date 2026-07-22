@@ -21,7 +21,7 @@ struct SearchIntent {
     @Guide(description: "A specific song/track title if the user named one. A classical catalogue or opus reference ('op 28 no 24', 'bwv 1041', 'k 466') names one specific piece — put the reference here formatted with periods ('Op. 28 No. 24', 'BWV 1041', 'K. 466'), keeping the composer in `artist`, NOT here. Empty if the user did not ask for one particular song or piece.")
     var song: String
 
-    @Guide(description: "The kind of result the user wants to see. Leave empty when the query names no result type, so all kinds are searched. Almost never choose 'artist' — pick it ONLY when the user literally wants a list of performers or bands (e.g. 'bands like Radiohead'). Simply mentioning an artist is NOT a request for the 'artist' category. When the user names an artist and asks for their 'songs', 'tracks', 'pieces', 'works', or 'music' (in any phrasing), that means that artist's songs → [song]; if they just name an artist with no result type, leave categories empty.")
+    @Guide(description: "The kind of result the user wants to see. Leave empty when the query names no result type, so all kinds are searched. Almost never choose 'artist' — pick it ONLY when the user literally wants a list of performers or bands (e.g. 'bands like Radiohead'). Simply mentioning an artist is NOT a request for the 'artist' category. When the user names an artist and asks for their 'songs', 'tracks', 'pieces', 'works', or 'music' (in any phrasing), that means that artist's songs → [song]; if they just name an artist with no result type, leave categories empty. Choose 'station' when the user asks for a radio station or live broadcast — typically a call sign or network name followed by 'radio' or 'station' (e.g. 'cpr radio', 'wnyc station', 'npr radio') — and put ONLY the call sign or network name in `term`, dropping the word 'radio' or 'station' itself.")
     var categories: [GenerableCategory]
 
     /// The intent projected onto the framework-free `SearchFacets` the planner
@@ -43,7 +43,7 @@ struct SearchIntent {
 /// FoundationModels import.
 @Generable
 enum GenerableCategory {
-    case song, album, artist, playlist
+    case song, album, artist, playlist, station
 
     var searchCategory: SearchCategory {
         switch self {
@@ -51,6 +51,7 @@ enum GenerableCategory {
         case .album: .album
         case .artist: .artist
         case .playlist: .playlist
+        case .station: .station
         }
     }
 }
