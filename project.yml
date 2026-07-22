@@ -29,8 +29,8 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.boulderhopkins.MiniMusic
-        MARKETING_VERSION: "26.717.0"
-        CURRENT_PROJECT_VERSION: "17"
+        MARKETING_VERSION: "26.722.0"
+        CURRENT_PROJECT_VERSION: "18"
         SWIFT_VERSION: "6.2"
         SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
         DEVELOPMENT_TEAM: 25RCAA3JLJ
