@@ -33,10 +33,16 @@ struct PlayerView: View {
                     }
                 }
         }
-        // Width is fixed; height follows the content so there's no dead space
-        // above/below the player. The scrollable Queue/Library destinations set
-        // their own height.
+        // Width is fixed. Height is one-way: each screen measures its *intrinsic*
+        // content height (PanelHeightKey, measured under .fixedSize so it ignores the
+        // window) and the AppDelegate resizes the panel to match. The panel's own
+        // auto-sizing is OFF, so there's a single sizing authority — content drives the
+        // window, never the reverse — which is what prevents the layout feedback loop
+        // that overflowed the stack. Each screen hugs its content (no wasted space).
         .frame(width: 320)
+        .onPreferenceChange(PanelHeightKey.self) { height in
+            if height > 0 { appState.requestPanelHeight?(PanelMetrics.clamp(height)) }
+        }
         .onChange(of: appState.isSearchFieldFocused) { _, shouldFocus in
             if shouldFocus {
                 isSearchFocused = true
@@ -78,6 +84,13 @@ struct PlayerView: View {
             navigationSection
         }
         .padding(.vertical, 8)
+        // Hug the content vertically so the measured height is intrinsic (independent
+        // of the window height) — the key to the one-way sizing not looping. Measure
+        // that hugged height, THEN fill to top so the screen pins up if the window is
+        // momentarily taller (mid-transition).
+        .fixedSize(horizontal: false, vertical: true)
+        .reportsPanelHeight()
+        .frame(maxHeight: .infinity, alignment: .top)
         .keyboardShortcut(.space, modifiers: [])
     }
 

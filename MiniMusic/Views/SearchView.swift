@@ -23,6 +23,10 @@ struct SearchView: View {
             Divider()
             content
         }
+        // A results list wants a consistent, tall, scrollable area — fix its height
+        // and report it so the panel adopts it (rather than hugging a short result set).
+        .frame(height: PanelMetrics.maxHeight)
+        .reportsPanelHeight()
         .navigationBarBackButtonHidden(true)
         .toolbar(.hidden, for: .automatic)
         .onChange(of: searchVM.searchQuery) { _, _ in

@@ -16,7 +16,8 @@ struct QueueView: View {
             }
             queueContent
         }
-        .frame(height: 450)
+        .frame(height: PanelMetrics.maxHeight)
+        .reportsPanelHeight()
         .navigationBarBackButtonHidden(true)
         .toolbar(.hidden, for: .automatic)
         .task { playerVM.refreshQueueComposers() }

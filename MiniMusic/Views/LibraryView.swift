@@ -17,7 +17,8 @@ struct LibraryView: View {
             Divider()
             content
         }
-        .frame(height: 450)
+        .frame(height: PanelMetrics.maxHeight)
+        .reportsPanelHeight()
         .navigationBarBackButtonHidden(true)
         .toolbar(.hidden, for: .automatic)
         .task {

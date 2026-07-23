@@ -79,7 +79,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 
         let panel = MenuPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 320, height: 400),
+            contentRect: NSRect(x: 0, y: 0, width: 320, height: PanelMetrics.maxHeight),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
@@ -92,10 +92,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         panel.hasShadow = true
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         let hosting = NSHostingController(rootView: root)
-        hosting.sizingOptions = .preferredContentSize
+        // Auto-sizing is deliberately OFF. Letting the hosting controller resize the
+        // window to fit an ambiguous-height NavigationStack is circular and overflowed
+        // the stack (SIGSEGV). Instead the panel is resized one-way from the content's
+        // measured intrinsic height (see `resizePanel(to:)`).
+        hosting.sizingOptions = []
         panel.contentViewController = hosting
         panel.delegate = self
         self.panel = panel
+
+        // The visible screen reports its intrinsic height here; resize the panel to hug.
+        appState.requestPanelHeight = { [weak self] height in
+            self?.resizePanel(to: height)
+        }
 
         KeyboardShortcuts.onKeyDown(for: .toggleMiniMusic) { [weak self] in
             MainActor.assumeIsolated { self?.toggle() }
@@ -152,6 +161,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(80))
             appState.isSearchFieldFocused = true
+        }
+    }
+
+    /// Resize the panel to the content's measured height, pinning the top edge so the
+    /// menu grows/shrinks downward from the status item.
+    ///
+    /// Deferred to the next runloop turn so it never runs *inside* the SwiftUI layout
+    /// pass that produced the measurement — that reentrancy is exactly what overflowed
+    /// the stack. The change-guard also stops a settled size from churning.
+    private func resizePanel(to height: CGFloat) {
+        DispatchQueue.main.async { [weak self] in
+            guard let self, let panel = self.panel else { return }
+            guard abs(panel.frame.height - height) > 0.5 else { return }
+            var frame = panel.frame
+            let topEdge = frame.maxY
+            frame.size.height = height
+            frame.origin.y = topEdge - height
+            panel.setFrame(frame, display: true, animate: false)
         }
     }
 
